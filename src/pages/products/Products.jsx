@@ -162,7 +162,7 @@ const Products = () => {
 
       <div className="bg-carbon rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[600px] md:min-w-full">
+          <div className="min-w-[800px] md:min-w-full">
             <table className="w-full text-sm">
               <thead className="bg-smoke text-grayLight border-b border-gray-700">
                 <tr>
@@ -170,6 +170,7 @@ const Products = () => {
                   <th className="py-3 px-4 text-left">Preço Compra</th>
                   <th className="py-3 px-4 text-left">Preço Venda</th>
                   <th className="py-3 px-4 text-left">Estoque</th>
+                  <th className="py-3 px-4 text-left">Estoque Mínimo</th>
                   <th className="py-3 px-4 text-left">Validade</th>
                   <th className="py-3 px-4 text-left">Ações</th>
                 </tr>
@@ -177,7 +178,7 @@ const Products = () => {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="py-8 text-center text-grayLight">
+                    <td colSpan="7" className="py-8 text-center text-grayLight">
                       Nenhum produto cadastrado.
                     </td>
                   </tr>
@@ -193,10 +194,11 @@ const Products = () => {
                       <td className="py-3 px-4">R$ {product.purchase_price.toFixed(2)}</td>
                       <td className="py-3 px-4">R$ {product.sale_price.toFixed(2)}</td>
                       <td className="py-3 px-4">
-                        <span className={product.quantity <= (product.min_stock || 5) ? 'text-yellow-400' : 'text-green-400'}>
+                        <span className={product.quantity <= (product.min_stock || 5) ? 'text-alertYellow' : 'text-green-400'}>
                           {product.quantity}
                         </span>
                       </td>
+                      <td className="py-3 px-4">{product.min_stock || 5}</td>
                       <td className="py-3 px-4">
                         {product.has_expiry && product.expiry_date ? (
                           <span className={`px-2 py-1 rounded text-xs ${
@@ -211,8 +213,12 @@ const Products = () => {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <button onClick={() => handleEdit(product)} className="text-green-500 hover:text-green-400 mr-3">Editar</button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-400">Excluir</button>
+                        <button onClick={() => handleEdit(product)} className="text-garden hover:text-green-400 mr-3 transition">
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(product.id)} className="text-alertRed hover:text-red-400 transition">
+                          Excluir
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -223,36 +229,133 @@ const Products = () => {
         </div>
       </div>
 
+      {/* Modal completo */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-lg w-full max-w-md p-6">
-            <h2 className="text-xl font-bold text-orange-500 mb-4">
-              {editingProduct ? 'Editar Produto' : 'Novo Produto'}
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-300 text-sm mb-1">Nome *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700" required />
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">Preço Venda</label>
-                  <input type="number" step="0.01" value={formData.sale_price} onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })} className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700" required />
+          <div className="bg-carbon rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-burnt mb-4">
+                {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+              </h2>
+              <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                  <label className="block text-grayLight text-sm mb-1">Nome *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    required
+                  />
                 </div>
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">Quantidade</label>
-                  <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700" />
+                
+                <div className="mb-4">
+                  <label className="block text-grayLight text-sm mb-1">Descrição</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    rows="2"
+                  />
                 </div>
-              </div>
-              <div className="flex gap-3">
-                <button type="submit" className="flex-1 bg-green-700 text-white py-2 rounded-lg hover:bg-green-600">
-                  {editingProduct ? 'Atualizar' : 'Cadastrar'}
-                </button>
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600">
-                  Cancelar
-                </button>
-              </div>
-            </form>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-grayLight text-sm mb-1">Preço Compra</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.purchase_price}
+                      onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-grayLight text-sm mb-1">Preço Venda *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.sale_price}
+                      onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-grayLight text-sm mb-1">Quantidade</label>
+                    <input
+                      type="number"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-grayLight text-sm mb-1">Estoque Mínimo</label>
+                    <input
+                      type="number"
+                      value={formData.min_stock}
+                      onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_expiry}
+                      onChange={(e) => setFormData({ ...formData, has_expiry: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-grayLight text-sm">Produto tem validade</span>
+                  </label>
+                </div>
+                
+                {formData.has_expiry && (
+                  <div className="mb-4">
+                    <label className="block text-grayLight text-sm mb-1">Data de Validade</label>
+                    <input
+                      type="date"
+                      value={formData.expiry_date}
+                      onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    />
+                  </div>
+                )}
+                
+                <div className="mb-4">
+                  <label className="block text-grayLight text-sm mb-1">URL da Foto (opcional)</label>
+                  <input
+                    type="text"
+                    value={formData.photo_url}
+                    onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                    placeholder="https://exemplo.com/foto.jpg"
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-garden text-white py-2 rounded-lg hover:bg-green-700 transition"
+                  >
+                    {editingProduct ? 'Atualizar' : 'Cadastrar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
