@@ -20,7 +20,7 @@ const Accounts = () => {
     recurring_type: 'monthly'
   })
   const [stats, setStats] = useState({
-    totalSales: 0,
+    totalReceived: 0,
     totalToReceive: 0,
     totalToPay: 0,
     balance: 0
@@ -33,18 +33,19 @@ const Accounts = () => {
   const fetchData = async () => {
     setLoading(true)
     
-    // Buscar vendas (faturamento total)
-    const { data: sales } = await supabase.from('sales').select('total_amount, paid_amount')
-    
-    const totalSales = (sales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
+    // Buscar vendas - valor recebido
+    const { data: sales } = await supabase.from('sales').select('paid_amount')
     const totalReceived = (sales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
-    const totalToReceive = totalSales - totalReceived
     
-    // Buscar parcelas a receber dos clientes
+    // Buscar parcelas a receber
     const { data: installments } = await supabase
       .from('installments')
       .select('*, sales(customer_name)')
       .order('due_date', { ascending: true })
+    
+    const totalToReceive = (installments || [])
+      .filter(i => i.status !== 'paid')
+      .reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
     
     // Buscar contas a pagar do mês atual
     const today = new Date()
@@ -65,7 +66,6 @@ const Accounts = () => {
     setReceivables(installments || [])
     setPayables(bills || [])
     setStats({
-      totalSales: totalSales,
       totalReceived: totalReceived,
       totalToReceive: totalToReceive,
       totalToPay: totalToPay,
@@ -88,21 +88,13 @@ const Accounts = () => {
       
       if (updateError) throw updateError
       
-      // Se for recorrente, criar nova conta para o próximo período
       if (bill.is_recurring) {
         let nextDueDate = new Date(bill.due_date)
         switch (bill.recurring_type) {
-          case 'monthly':
-            nextDueDate = addMonths(nextDueDate, 1)
-            break
-          case 'weekly':
-            nextDueDate = addDays(nextDueDate, 7)
-            break
-          case 'yearly':
-            nextDueDate = addYears(nextDueDate, 1)
-            break
-          default:
-            nextDueDate = addMonths(nextDueDate, 1)
+          case 'monthly': nextDueDate = addMonths(nextDueDate, 1); break
+          case 'weekly': nextDueDate = addDays(nextDueDate, 7); break
+          case 'yearly': nextDueDate = addYears(nextDueDate, 1); break
+          default: nextDueDate = addMonths(nextDueDate, 1)
         }
         
         await supabase.from('bills_to_pay').insert([{
@@ -166,24 +158,13 @@ const Accounts = () => {
     }
 
     if (editingBill) {
-      const { error } = await supabase
-        .from('bills_to_pay')
-        .update(billData)
-        .eq('id', editingBill.id)
-      if (error) {
-        toast.error('Erro ao atualizar')
-      } else {
-        toast.success('Conta atualizada!')
-      }
+      const { error } = await supabase.from('bills_to_pay').update(billData).eq('id', editingBill.id)
+      if (error) toast.error('Erro ao atualizar')
+      else toast.success('Conta atualizada!')
     } else {
-      const { error } = await supabase
-        .from('bills_to_pay')
-        .insert([billData])
-      if (error) {
-        toast.error('Erro ao adicionar conta')
-      } else {
-        toast.success('Conta adicionada!')
-      }
+      const { error } = await supabase.from('bills_to_pay').insert([billData])
+      if (error) toast.error('Erro ao adicionar conta')
+      else toast.success('Conta adicionada!')
     }
 
     setShowModal(false)
@@ -195,9 +176,8 @@ const Accounts = () => {
   const handleDeleteBill = async (id) => {
     if (window.confirm('Excluir esta conta?')) {
       const { error } = await supabase.from('bills_to_pay').delete().eq('id', id)
-      if (error) {
-        toast.error('Erro ao excluir')
-      } else {
+      if (error) toast.error('Erro ao excluir')
+      else {
         toast.success('Conta excluída!')
         fetchData()
       }
@@ -243,23 +223,12 @@ const Accounts = () => {
 
   return (
     <div style={{ padding: '16px' }}>
-      {/* Cabeçalho */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Contas</h1>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie suas finanças</p>
       </div>
 
-      {/* Cards de resumo */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '12px',
-        marginBottom: '24px'
-      }}>
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 Faturamento</p>
-          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#3A5F40' }}>{formatCurrency(stats.totalSales)}</p>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>✅ Recebido</p>
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.totalReceived)}</p>
@@ -278,47 +247,15 @@ const Accounts = () => {
         </div>
       </div>
 
-      {/* Abas */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-        <button
-          onClick={() => setActiveTab('receber')}
-          style={{
-            flex: 1,
-            padding: '12px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'receber' ? '#3A5F40' : 'transparent',
-            color: activeTab === 'receber' ? 'white' : '#E0E0E0',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          💵 Contas a Receber
-        </button>
-        <button
-          onClick={() => setActiveTab('pagar')}
-          style={{
-            flex: 1,
-            padding: '12px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: activeTab === 'pagar' ? '#3A5F40' : 'transparent',
-            color: activeTab === 'pagar' ? 'white' : '#E0E0E0',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          🧾 Contas a Pagar
-        </button>
+        <button onClick={() => setActiveTab('receber')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'receber' ? '#3A5F40' : 'transparent', color: activeTab === 'receber' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>💵 Contas a Receber</button>
+        <button onClick={() => setActiveTab('pagar')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'pagar' ? '#3A5F40' : 'transparent', color: activeTab === 'pagar' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>🧾 Contas a Pagar</button>
       </div>
 
-      {/* Contas a Receber */}
       {activeTab === 'receber' && (
         <div>
           {receivables.length === 0 ? (
-            <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: '#9CA3AF' }}>Nenhum recebimento pendente</p>
-            </div>
+            <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}><p style={{ color: '#9CA3AF' }}>Nenhum recebimento pendente</p></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {receivables.map(inst => {
@@ -338,12 +275,7 @@ const Accounts = () => {
                       </div>
                     </div>
                     {inst.status !== 'paid' && (
-                      <button
-                        onClick={() => handleReceiveInstallment(inst)}
-                        style={{ marginTop: '12px', width: '100%', padding: '8px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                      >
-                        Registrar Pagamento
-                      </button>
+                      <button onClick={() => handleReceiveInstallment(inst)} style={{ marginTop: '12px', width: '100%', padding: '8px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Registrar Pagamento</button>
                     )}
                   </div>
                 )
@@ -353,26 +285,14 @@ const Accounts = () => {
         </div>
       )}
 
-      {/* Contas a Pagar */}
       {activeTab === 'pagar' && (
         <div>
           <div style={{ marginBottom: '16px', textAlign: 'right' }}>
-            <button
-              onClick={() => {
-                setEditingBill(null)
-                setFormData({ description: '', amount: '', due_date: '', category: 'outros', notes: '', is_recurring: false, recurring_type: 'monthly' })
-                setShowModal(true)
-              }}
-              style={{ padding: '10px 20px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
-              + Nova Conta
-            </button>
+            <button onClick={() => { setEditingBill(null); setFormData({ description: '', amount: '', due_date: '', category: 'outros', notes: '', is_recurring: false, recurring_type: 'monthly' }); setShowModal(true) }} style={{ padding: '10px 20px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>+ Nova Conta</button>
           </div>
 
           {payables.length === 0 ? (
-            <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: '#9CA3AF' }}>Nenhuma conta a pagar</p>
-            </div>
+            <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}><p style={{ color: '#9CA3AF' }}>Nenhuma conta a pagar</p></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {payables.map(bill => {
@@ -407,54 +327,19 @@ const Accounts = () => {
         </div>
       )}
 
-      {/* Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingBill ? 'Editar Conta' : 'Nova Conta'}</h2>
             <form onSubmit={handleSubmitBill}>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Descrição *</label>
-                <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required />
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Valor *</label>
-                <input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required />
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Data de Vencimento *</label>
-                <input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required />
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Categoria</label>
-                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}>
-                  {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={formData.is_recurring} onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })} />
-                  <span style={{ fontSize: '14px' }}>Conta recorrente (se repete automaticamente)</span>
-                </label>
-              </div>
-              {formData.is_recurring && (
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Frequência</label>
-                  <select value={formData.recurring_type} onChange={(e) => setFormData({ ...formData, recurring_type: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}>
-                    <option value="monthly">Mensal</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="yearly">Anual</option>
-                  </select>
-                </div>
-              )}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Observações</label>
-                <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} />
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
-              </div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Descrição *</label><input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Valor *</label><input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Data de Vencimento *</label><input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Categoria</label><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}>{categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}><input type="checkbox" checked={formData.is_recurring} onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })} /><span style={{ fontSize: '14px' }}>Conta recorrente (se repete automaticamente)</span></label></div>
+              {formData.is_recurring && (<div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Frequência</label><select value={formData.recurring_type} onChange={(e) => setFormData({ ...formData, recurring_type: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select></div>)}
+              <div style={{ marginBottom: '20px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Observações</label><textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} /></div>
+              <div style={{ display: 'flex', gap: '12px' }}><button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button><button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button></div>
             </form>
           </div>
         </div>

@@ -13,11 +13,13 @@ const Reports = () => {
   const [stats, setStats] = useState({
     totalSales: 0,
     grossRevenue: 0,
-    received: 0,
-    pending: 0,
+    totalCost: 0,
+    grossProfit: 0,
+    fees: 0,
+    taxes: 0,
     expensesPaid: 0,
-    expensesPending: 0,
-    netProfit: 0
+    netProfit: 0,
+    netMargin: 0
   })
   const [paymentMethods, setPaymentMethods] = useState([])
   const [topProducts, setTopProducts] = useState([])
@@ -82,6 +84,7 @@ const Reports = () => {
     setLoading(true)
     const { start, end } = getDateRange()
     
+    // 1. Vendas do período
     const { data: allSales } = await supabase
       .from('sales')
       .select('*')
@@ -89,8 +92,15 @@ const Reports = () => {
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
     
+    // 2. Itens das vendas (inclui purchase_price)
+    const { data: saleItems } = await supabase
+      .from('sale_items')
+      .select('*')
+    
+    // 3. Produtos para estoque
     const { data: allProducts } = await supabase.from('products').select('*')
     
+    // 4. Contas pagas no período
     const { data: paidBills } = await supabase
       .from('bills_to_pay')
       .select('*')
@@ -98,10 +108,10 @@ const Reports = () => {
       .gte('paid_date', start.toISOString().split('T')[0])
       .lte('paid_date', end.toISOString().split('T')[0])
     
+    // 5. Contas a pagar do mês atual
     const today = new Date()
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    
     const { data: pendingBillsData } = await supabase
       .from('bills_to_pay')
       .select('*')
@@ -109,39 +119,49 @@ const Reports = () => {
       .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
       .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
     
-    const { data: saleItems } = await supabase.from('sale_items').select('*')
+    // 6. Configurações de taxas e impostos
+    const { data: feesConfig } = await supabase.from('payment_fees').select('*')
+    const { data: taxesConfig } = await supabase.from('taxes').select('*')
     
+    // CÁLCULOS
     const grossRevenue = (allSales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
+    const totalCost = (saleItems || []).reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)
+    const grossProfit = grossRevenue - totalCost
+    
+    // Calcular taxas sobre o recebido (não faturamento, pois taxas incidem sobre valor recebido)
     const received = (allSales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
-    const pending = grossRevenue - received
+    let fees = 0
+    if (feesConfig) {
+      for (const sale of allSales || []) {
+        const feeConfig = feesConfig.find(f => f.payment_method === sale.payment_method)
+        if (feeConfig && feeConfig.fee_percent) {
+          fees += (sale.paid_amount || 0) * (feeConfig.fee_percent / 100)
+        }
+      }
+    }
+    
+    // Impostos sobre faturamento (configurável)
+    let taxes = 0
+    if (taxesConfig) {
+      for (const tax of taxesConfig) {
+        taxes += grossRevenue * (tax.rate_percent / 100)
+      }
+    }
+    
     const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
-    const expensesPending = (pendingBillsData || []).reduce((sum, b) => sum + b.amount, 0)
-    const netProfit = received - expensesPaid
+    const netProfit = grossProfit - fees - taxes - expensesPaid
+    const netMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0
     
-    const lowStock = (allProducts || []).filter(p => p.quantity <= (p.min_stock || 5))
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    const stale = (allProducts || []).filter(p => {
-      if (!p.last_sold_at) return true
-      return new Date(p.last_sold_at) < sixMonthsAgo
-    })
-    
-    const monthlyData = {}
-    ;(allSales || []).forEach(sale => {
-      const month = format(new Date(sale.created_at), 'MMM/yy')
-      monthlyData[month] = (monthlyData[month] || 0) + (sale.total_amount || 0)
-    })
-    const monthlyChartData = Object.entries(monthlyData).map(([month, total]) => ({ month, total }))
-    
+    // Métodos de pagamento
     const methods = {}
     ;(allSales || []).forEach(sale => {
       const method = sale.payment_method || 'outro'
       methods[method] = (methods[method] || 0) + 1
     })
     
+    // Produtos mais vendidos
     const productCount = {}
     const serviceCount = {}
-    
     saleItems?.forEach(item => {
       if (item.item_type === 'product') {
         productCount[item.item_name] = (productCount[item.item_name] || 0) + (item.quantity || 0)
@@ -160,6 +180,22 @@ const Reports = () => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5)
     
+    const lowStock = (allProducts || []).filter(p => p.quantity <= (p.min_stock || 5))
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const stale = (allProducts || []).filter(p => {
+      if (!p.last_sold_at) return true
+      return new Date(p.last_sold_at) < sixMonthsAgo
+    })
+    
+    // Faturamento mensal para gráfico
+    const monthlyData = {}
+    ;(allSales || []).forEach(sale => {
+      const month = format(new Date(sale.created_at), 'MMM/yy')
+      monthlyData[month] = (monthlyData[month] || 0) + (sale.total_amount || 0)
+    })
+    const monthlyChartData = Object.entries(monthlyData).map(([month, total]) => ({ month, total }))
+    
     const methodLabels = {
       cash: 'Dinheiro',
       pix: 'Pix',
@@ -168,7 +204,6 @@ const Reports = () => {
       installment: 'Parcelado',
       outro: 'Outro'
     }
-    
     const methodsFormatted = Object.entries(methods).map(([key, value]) => ({
       method: methodLabels[key] || key,
       count: value
@@ -185,11 +220,13 @@ const Reports = () => {
     setStats({
       totalSales: (allSales || []).length,
       grossRevenue: grossRevenue,
-      received: received,
-      pending: pending,
+      totalCost: totalCost,
+      grossProfit: grossProfit,
+      fees: fees,
+      taxes: taxes,
       expensesPaid: expensesPaid,
-      expensesPending: expensesPending,
-      netProfit: netProfit
+      netProfit: netProfit,
+      netMargin: netMargin
     })
     setLoading(false)
   }
@@ -224,7 +261,7 @@ const Reports = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
-          <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise financeira profissional</p>
         </div>
         <button onClick={generatePDF} style={{ padding: '10px 20px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📄 Exportar PDF</button>
       </div>
@@ -269,31 +306,41 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Cards Financeiros */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+      {/* Cards Financeiros Completos */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>💰 Faturamento</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.grossRevenue)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>💰 Faturamento Bruto</p>
+          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.grossRevenue)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>✅ Recebido</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.received)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>📦 Custo Produtos Vendidos</p>
+          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.totalCost)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⏳ A Receber</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.pending)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>📈 Lucro Bruto</p>
+          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#3A5F40' }}>{formatCurrency(stats.grossProfit)}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>💸 Taxas (cartão)</p>
+          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.fees)}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>🏛️ Impostos</p>
+          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.taxes)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '11px' }}>📉 Despesas Pagas</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.expensesPaid)}</p>
-        </div>
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⚠️ A Pagar</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.expensesPending)}</p>
+          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.expensesPaid)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⚖️ Lucro Líquido</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netProfit >= 0 ? '#2E7D32' : '#C62828' }}>{formatCurrency(stats.netProfit)}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>📊 Margem de Lucro</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netMargin >= 20 ? '#2E7D32' : stats.netMargin >= 0 ? '#F9A825' : '#C62828' }}>
+            {stats.netMargin.toFixed(1)}%
+          </p>
         </div>
       </div>
 
@@ -435,7 +482,7 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Modal de exclusão de venda */}
+      {/* Modais de exclusão */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
@@ -454,7 +501,6 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Modal de remoção de despesa */}
       {showDeleteBillModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>

@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import {
+import { Settings,  NavLink } from 'react-router-dom'
+import { Settings, 
   BarChart3,
   Clock3,
   LayoutDashboard,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 
 const navigation = [
+  { key: 'settings', label: 'Configurações', icon: Settings, path: '/settings' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
   { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
@@ -110,4 +112,5 @@ export default function Layout({ user, onLogout, children }) {
     </div>
   )
 }
+
 
