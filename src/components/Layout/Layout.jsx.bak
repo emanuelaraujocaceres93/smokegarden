@@ -1,6 +1,6 @@
-ï»¿import React, { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
-import {
+import React, { useEffect, useState } from 'react'
+import {  NavLink } from 'react-router-dom'
+import { 
   BarChart3,
   Clock3,
   LayoutDashboard,
@@ -10,20 +10,20 @@ import {
   ShoppingCart,
   Wrench,
   Users,
-  Truck,
-  Settings
+  Truck
 } from 'lucide-react'
 
 const navigation = [
+  { key: 'settings', label: 'Configurações', icon: Settings, path: '/settings' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
-  { key: 'services', label: 'ServiÃ§os', icon: Wrench, path: '/services' },
+  { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
   { key: 'accounts', label: 'Contas', icon: Clock3, path: '/accounts' },
-  { key: 'reports', label: 'RelatÃ³rios', icon: BarChart3, path: '/reports' },
+  { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
   { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
-  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' },
-  { key: 'settings', label: 'ConfiguraÃ§Ãµes', icon: Settings, path: '/settings' }
+  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' }
 ]
 
 export default function Layout({ user, onLogout, children }) {
@@ -50,7 +50,7 @@ export default function Layout({ user, onLogout, children }) {
         <div className="layout-sidebar-header">
           <div>
             <h1>Smoke Garden</h1>
-            <p>MecÃ¢nica 2 Tempos</p>
+            <p>Mecânica 2 Tempos</p>
           </div>
         </div>
 
@@ -112,3 +112,5 @@ export default function Layout({ user, onLogout, children }) {
     </div>
   )
 }
+
+
