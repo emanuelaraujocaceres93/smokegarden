@@ -34,20 +34,19 @@ const Accounts = () => {
     setLoading(true)
     
     // Buscar vendas (faturamento total)
-    const { data: sales } = await supabase.from('sales').select('total_amount, paid_amount, status')
+    const { data: sales } = await supabase.from('sales').select('total_amount, paid_amount')
     
     const totalSales = (sales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
     const totalReceived = (sales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
     const totalToReceive = totalSales - totalReceived
     
-    // Buscar parcelas a receber (clientes)
+    // Buscar parcelas a receber dos clientes
     const { data: installments } = await supabase
       .from('installments')
       .select('*, sales(customer_name)')
       .order('due_date', { ascending: true })
     
-    // Buscar contas a pagar (não pagas)
-        // Buscar apenas contas do mês atual (não pagas)
+    // Buscar contas a pagar do mês atual
     const today = new Date()
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
@@ -58,19 +57,10 @@ const Accounts = () => {
       .eq('paid', false)
       .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
       .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
-      .from('bills_to_pay')
-      .select('*')
-      .eq('paid', false)
       .order('due_date', { ascending: true })
     
-    // Buscar contas já pagas
-    const { data: paidBills } = await supabase
-      .from('bills_to_pay')
-      .select('*')
-      .eq('paid', true)
-    
     const totalToPay = (bills || []).reduce((sum, b) => sum + b.amount, 0)
-    const totalPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
+    const balance = totalReceived - totalToPay
     
     setReceivables(installments || [])
     setPayables(bills || [])
@@ -79,15 +69,13 @@ const Accounts = () => {
       totalReceived: totalReceived,
       totalToReceive: totalToReceive,
       totalToPay: totalToPay,
-      totalPaid: totalPaid,
-      balance: totalReceived - totalPaid
+      balance: balance
     })
     setLoading(false)
   }
 
   const handlePayBill = async (bill) => {
     try {
-      // Atualizar conta como paga
       const { error: updateError } = await supabase
         .from('bills_to_pay')
         .update({ 
@@ -100,7 +88,7 @@ const Accounts = () => {
       
       if (updateError) throw updateError
       
-      // Se for recorrente, criar nova conta para o próximo mês
+      // Se for recorrente, criar nova conta para o próximo período
       if (bill.is_recurring) {
         let nextDueDate = new Date(bill.due_date)
         switch (bill.recurring_type) {
@@ -113,6 +101,8 @@ const Accounts = () => {
           case 'yearly':
             nextDueDate = addYears(nextDueDate, 1)
             break
+          default:
+            nextDueDate = addMonths(nextDueDate, 1)
         }
         
         await supabase.from('bills_to_pay').insert([{
@@ -122,7 +112,7 @@ const Accounts = () => {
           category: bill.category,
           notes: bill.notes,
           is_recurring: true,
-          recurring_type: bill.recurring_type,
+          recurring_type: bill.recurring_type || 'monthly',
           status: 'pending',
           paid: false,
           paid_amount: 0
@@ -132,7 +122,7 @@ const Accounts = () => {
       toast.success('Conta paga com sucesso!')
       fetchData()
     } catch (error) {
-      toast.error('Erro ao pagar conta')
+      toast.error('Erro ao pagar conta: ' + error.message)
     }
   }
 
@@ -152,20 +142,10 @@ const Accounts = () => {
 
       if (error) throw error
       
-      // Atualizar status da venda se todas parcelas estiverem pagas
-      if (isFullyPaid) {
-        const saleInstallments = receivables.filter(i => i.sale_id === installment.sale_id)
-        const allPaid = saleInstallments.every(i => i.id === installment.id || i.status === 'paid')
-        
-        if (allPaid) {
-          await supabase.from('sales').update({ status: 'completed' }).eq('id', installment.sale_id)
-        }
-      }
-      
       toast.success('Pagamento registrado!')
       fetchData()
     } catch (error) {
-      toast.error('Erro ao registrar pagamento')
+      toast.error('Erro ao registrar pagamento: ' + error.message)
     }
   }
 
@@ -233,15 +213,15 @@ const Accounts = () => {
     const isOverdue = daysDiff < 0
     
     if (type === 'receivable') {
-      if (item.status === 'paid') return { label: 'Pago', color: 'status-paid' }
-      if (isOverdue) return { label: 'Vencido', color: 'status-overdue' }
-      if (daysDiff <= 7) return { label: 'Vence em breve', color: 'status-warning' }
-      return { label: 'Pendente', color: 'status-pending' }
+      if (item.status === 'paid') return { label: 'Pago', color: '#2E7D32', bg: '#2E7D3222' }
+      if (isOverdue) return { label: 'Vencido', color: '#C62828', bg: '#C6282822' }
+      if (daysDiff <= 7) return { label: 'Vence em breve', color: '#F9A825', bg: '#F9A82522' }
+      return { label: 'Pendente', color: '#D95A1A', bg: '#D95A1A22' }
     } else {
-      if (item.paid) return { label: 'Pago', color: 'status-paid' }
-      if (isOverdue) return { label: 'Vencido', color: 'status-overdue' }
-      if (daysDiff <= 7) return { label: 'Vence em breve', color: 'status-warning' }
-      return { label: 'Pendente', color: 'status-pending' }
+      if (item.paid) return { label: 'Pago', color: '#2E7D32', bg: '#2E7D3222' }
+      if (isOverdue) return { label: 'Vencido', color: '#C62828', bg: '#C6282822' }
+      if (daysDiff <= 7) return { label: 'Vence em breve', color: '#F9A825', bg: '#F9A82522' }
+      return { label: 'Pendente', color: '#D95A1A', bg: '#D95A1A22' }
     }
   }
 
@@ -285,14 +265,16 @@ const Accounts = () => {
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.totalReceived)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⏳ A Receber</p>
+          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.totalToReceive)}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>📉 A Pagar</p>
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.totalToPay)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Saldo</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.balance >= 0 ? '#2E7D32' : '#C62828' }}>
-            {formatCurrency(stats.balance)}
-          </p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.balance >= 0 ? '#2E7D32' : '#C62828' }}>{formatCurrency(stats.balance)}</p>
         </div>
       </div>
 
@@ -352,7 +334,7 @@ const Accounts = () => {
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#D95A1A', margin: '0' }}>{formatCurrency(inst.amount - (inst.paid_amount || 0))}</p>
                         <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: '#9CA3AF' }}>Vence: {format(new Date(inst.due_date), 'dd/MM/yyyy')}</p>
-                        <span className={status.color} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px' }}>{status.label}</span>
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', backgroundColor: status.bg, color: status.color }}>{status.label}</span>
                       </div>
                     </div>
                     {inst.status !== 'paid' && (
@@ -407,7 +389,7 @@ const Accounts = () => {
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828', margin: '0' }}>{formatCurrency(bill.amount)}</p>
                         <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: '#9CA3AF' }}>Vence: {format(new Date(bill.due_date), 'dd/MM/yyyy')}</p>
-                        <span className={status.color} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px' }}>{status.label}</span>
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', backgroundColor: status.bg, color: status.color }}>{status.label}</span>
                       </div>
                     </div>
                     {!bill.paid && (
@@ -482,5 +464,3 @@ const Accounts = () => {
 }
 
 export default Accounts
-
-
