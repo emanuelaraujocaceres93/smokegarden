@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { Users, Truck,  NavLink, Outlet } from 'react-router-dom'
-import { Users, Truck, 
+import { NavLink, Outlet } from 'react-router-dom'
+import {
   BarChart3,
   Clock3,
   LayoutDashboard,
@@ -8,18 +8,20 @@ import { Users, Truck,
   Menu,
   Package,
   ShoppingCart,
-  Wrench
+  Wrench,
+  Users,
+  Truck
 } from 'lucide-react'
 
 const navigation = [
-    { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
-  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' },
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
   { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
   { key: 'pending', label: 'Pagamentos', icon: Clock3, path: '/pending' },
-  { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' }
+  { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
+  { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
+  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' }
 ]
 
 export default function Layout({ user, onLogout }) {
