@@ -1,9 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { format, subMonths, isAfter, isBefore } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import Card from '../../components/ui/Card'
-import PageHeader from '../../components/ui/PageHeader'
+import { format } from 'date-fns'
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true)
@@ -40,26 +37,26 @@ const Dashboard = () => {
       .eq('status', 'pending')
       .lt('due_date', new Date().toISOString())
     
-    const lowStock = products?.filter(p => p.quantity <= (p.min_stock || 5)) || []
+    const lowStock = (products || []).filter(p => p.quantity <= (p.min_stock || 5))
     
     const thirtyDaysFromNow = new Date()
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
     
-    const expiring = products?.filter(p => {
+    const expiring = (products || []).filter(p => {
       if (!p.has_expiry || !p.expiry_date) return false
       const expiryDate = new Date(p.expiry_date)
-      return isAfter(expiryDate, new Date()) && isBefore(expiryDate, thirtyDaysFromNow)
-    }) || []
+      return expiryDate > new Date() && expiryDate < thirtyDaysFromNow
+    })
     
-    const recent = sales?.sort((a, b) => 
-      new Date(b.created_at) - new Date(a.created_at)
-    ).slice(0, 5) || []
+    const recent = (sales || [])
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 5)
     
     setStats({
-      totalSalesMonth: sales?.reduce((sum, s) => sum + s.total_amount, 0) || 0,
-      totalProducts: products?.length || 0,
+      totalSalesMonth: (sales || []).reduce((sum, s) => sum + s.total_amount, 0),
+      totalProducts: (products || []).length,
       lowStockProducts: lowStock.length,
-      pendingPayments: installments?.length || 0,
+      pendingPayments: (installments || []).length,
       productsExpiring: expiring.length
     })
     
@@ -69,76 +66,94 @@ const Dashboard = () => {
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64 text-grayLight">Carregando dashboard...</div>
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando dashboard...</div>
   }
 
-  const StatCard = ({ label, value, color }) => (
-    <Card className="text-center">
-      <p className="text-grayLight text-sm mb-1">{label}</p>
-      <p className={	ext-2xl md:text-3xl font-bold }>{value}</p>
-    </Card>
-  )
-
   return (
-    <div className="p-4 md:p-6">
-      <PageHeader title="Dashboard" description="Visão geral do negócio" />
-      
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Vendas do Mês" value={R$ } color="text-garden" />
-        <StatCard label="Total Produtos" value={stats.totalProducts} color="text-burnt" />
-        <StatCard label="Estoque Baixo" value={stats.lowStockProducts} color="text-alertYellow" />
-        <StatCard label="Pendentes" value={stats.pendingPayments} color="text-alertRed" />
-        <StatCard label="A Vencer" value={stats.productsExpiring} color="text-alertYellow" />
+    <div style={{ padding: '16px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Dashboard</h1>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Visão geral do negócio</p>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '16px',
+        marginBottom: '32px'
+      }}>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Vendas do Mês</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#3A5F40' }}>R$ {stats.totalSalesMonth.toLocaleString('pt-BR')}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Total Produtos</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A' }}>{stats.totalProducts}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Estoque Baixo</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F9A825' }}>{stats.lowStockProducts}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Pagamentos Pendentes</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#C62828' }}>{stats.pendingPayments}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Produtos a Vencer</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#F9A825' }}>{stats.productsExpiring}</p>
+        </div>
       </div>
 
       {lowStockList.length > 0 && (
-        <Card title="⚠️ Produtos com Estoque Baixo" className="mb-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr className="text-left text-grayLight">
-                  <th className="py-2">Produto</th>
-                  <th className="py-2">Estoque</th>
-                  <th className="py-2">Mínimo</th>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#F9A825', fontSize: '18px', marginBottom: '12px' }}>Atencao: Produtos com Estoque Baixo</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#9CA3AF', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '8px' }}>Produto</th>
+                  <th style={{ padding: '8px' }}>Estoque</th>
+                  <th style={{ padding: '8px' }}>Minimo</th>
                 </tr>
               </thead>
               <tbody>
-                {lowStockList.map(p => (
-                  <tr key={p.id} className="border-b border-border/50">
-                    <td className="py-2">{p.name}</td>
-                    <td className="py-2 text-alertYellow">{p.quantity}</td>
-                    <td className="py-2">{p.min_stock || 5}</td>
+                {lowStockList.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '8px' }}>{p.name}</td>
+                    <td style={{ padding: '8px', color: '#F9A825' }}>{p.quantity}</td>
+                    <td style={{ padding: '8px' }}>{p.min_stock || 5}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
 
       {recentSales.length > 0 && (
-        <Card title="Últimas Vendas">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr className="text-left text-grayLight">
-                  <th className="py-2">Data</th>
-                  <th className="py-2">Cliente</th>
-                  <th className="py-2">Total</th>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '12px' }}>Ultimas Vendas</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#9CA3AF', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '8px' }}>Data</th>
+                  <th style={{ padding: '8px' }}>Cliente</th>
+                  <th style={{ padding: '8px' }}>Total</th>
                 </tr>
               </thead>
               <tbody>
-                {recentSales.map(s => (
-                  <tr key={s.id} className="border-b border-border/50">
-                    <td className="py-2">{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
-                    <td className="py-2">{s.customer_name || '—'}</td>
-                    <td className="py-2">R$ {s.total_amount.toFixed(2)}</td>
+                {recentSales.map((s) => (
+                  <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '8px' }}>{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
+                    <td style={{ padding: '8px' }}>{s.customer_name || '—'}</td>
+                    <td style={{ padding: '8px' }}>R$ {s.total_amount.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
     </div>
   )
