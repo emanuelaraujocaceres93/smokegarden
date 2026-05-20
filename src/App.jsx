@@ -9,9 +9,9 @@ import Services from './pages/services/Services'
 import Sales from './pages/sales/Sales'
 import Accounts from './pages/accounts/Accounts'
 import Reports from './pages/reports/Reports'
-import Settings from './pages/settings/Settings'
 import Clients from './pages/clients/Clients'
 import Suppliers from './pages/suppliers/Suppliers'
+import Settings from './pages/settings/Settings'
 
 function AppContent() {
   const { user, loading, logout } = useAuth()
@@ -47,6 +47,7 @@ function AppContent() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/suppliers" element={<Suppliers />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
   )
