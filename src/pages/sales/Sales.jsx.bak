@@ -13,6 +13,8 @@ const Sales = () => {
   const [installments, setInstallments] = useState(1)
   const [notes, setNotes] = useState('')
   const [activeTab, setActiveTab] = useState('products')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showCart, setShowCart] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -20,20 +22,30 @@ const Sales = () => {
 
   const fetchData = async () => {
     setLoading(true)
-    const { data: productsData } = await supabase.from('products').select('*').order('name')
-    const { data: servicesData } = await supabase.from('services').select('*').order('name')
+    
+    const { data: productsData } = await supabase
+      .from('products')
+      .select('*')
+      .order('name')
+    
+    const { data: servicesData } = await supabase
+      .from('services')
+      .select('*')
+      .order('name')
+    
     setProducts(productsData || [])
     setServices(servicesData || [])
     setLoading(false)
   }
 
   const addToCart = (item, type) => {
+    const price = type === 'product' ? item.sale_price : item.price
     const existingItem = cart.find(i => i.id === item.id && i.type === type)
     
     if (existingItem) {
       setCart(cart.map(i => 
         i.id === item.id && i.type === type 
-          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.price }
+          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * price }
           : i
       ))
     } else {
@@ -41,17 +53,20 @@ const Sales = () => {
         id: item.id,
         type: type,
         name: item.name,
-        price: type === 'product' ? item.sale_price : item.price,
+        price: price,
         quantity: 1,
-        subtotal: type === 'product' ? item.sale_price : item.price
+        subtotal: price
       }])
     }
-    toast.success(`${item.name} adicionado ao carrinho!`)
+    toast.success(`${item.name} adicionado!`)
+    if (window.innerWidth < 768) {
+      setShowCart(true)
+    }
   }
 
   const removeFromCart = (id, type) => {
     setCart(cart.filter(i => !(i.id === id && i.type === type)))
-    toast.success('Item removido do carrinho')
+    toast.success('Item removido')
   }
 
   const updateQuantity = (id, type, newQuantity) => {
@@ -78,7 +93,7 @@ const Sales = () => {
 
   const finalizeSale = async () => {
     if (cart.length === 0) {
-      toast.error('Adicione itens ao carrinho primeiro!')
+      toast.error('Adicione itens ao carrinho!')
       return
     }
 
@@ -103,7 +118,7 @@ const Sales = () => {
       .select()
     
     if (saleError) {
-      toast.error('Erro ao finalizar venda: ' + saleError.message)
+      toast.error('Erro: ' + saleError.message)
       return
     }
 
@@ -154,13 +169,14 @@ const Sales = () => {
       }
     }
 
-    toast.success('Venda finalizada com sucesso!')
+    toast.success('Venda finalizada!')
     setCart([])
     setCustomerName('')
     setCustomerPhone('')
     setNotes('')
     setPaymentMethod('cash')
     setInstallments(1)
+    setShowCart(false)
     fetchData()
   }
 
@@ -168,296 +184,234 @@ const Sales = () => {
     return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   }
 
+  const getCurrentItems = () => {
+    const items = activeTab === 'products' ? products : services
+    if (!searchTerm) return items
+    return items.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
   }
 
-  const currentItems = activeTab === 'products' ? products : services
-  const itemTypeLabel = activeTab === 'products' ? 'Produto' : 'Serviço'
+  const currentItems = getCurrentItems()
+  const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <div style={{ padding: '16px' }}>
-      <div style={{ marginBottom: '24px' }}>
+      {/* Cabeçalho */}
+      <div style={{ marginBottom: '16px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Vendas</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Registre vendas de produtos e serviços</p>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Selecione produtos ou serviços</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        {/* Coluna esquerda: Produtos/Serviços */}
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <button
-              onClick={() => setActiveTab('products')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'products' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'products' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📦 Produtos
-            </button>
-            <button
-              onClick={() => setActiveTab('services')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'services' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'services' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              🔧 Serviços
-            </button>
-          </div>
-
-          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            {currentItems.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>
-                Nenhum {itemTypeLabel.toLowerCase()} cadastrado.
-              </p>
-            ) : (
-              currentItems.map(item => (
-                <div
-                  key={item.id}
-                  style={{
-                    backgroundColor: '#2C2C2C',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div>
-                    <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                    <p style={{ color: '#D95A1A', margin: '4px 0 0 0', fontSize: '14px' }}>
-                      {formatCurrency(activeTab === 'products' ? item.sale_price : item.price)}
-                    </p>
-                    {activeTab === 'products' && (
-                      <p style={{ color: '#9CA3AF', margin: '4px 0 0 0', fontSize: '12px' }}>
-                        Estoque: {item.quantity || 0}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => addToCart(item, activeTab === 'products' ? 'product' : 'service')}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: '#3A5F40',
-                      color: 'white',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+      {/* Botão do carrinho mobile */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('products')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: activeTab === 'products' ? '#3A5F40' : 'transparent',
+              color: activeTab === 'products' ? 'white' : '#E0E0E0',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            📦 Produtos ({products.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('services')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: activeTab === 'services' ? '#3A5F40' : 'transparent',
+              color: activeTab === 'services' ? 'white' : '#E0E0E0',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            🔧 Serviços ({services.length})
+          </button>
         </div>
+        
+        <button
+          onClick={() => setShowCart(!showCart)}
+          style={{
+            position: 'relative',
+            padding: '10px',
+            borderRadius: '30px',
+            border: 'none',
+            backgroundColor: '#D95A1A',
+            color: 'white',
+            cursor: 'pointer'
+          }}
+        >
+          🛒
+          {cartItemsCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '-5px',
+              right: '-5px',
+              backgroundColor: '#C62828',
+              color: 'white',
+              borderRadius: '10px',
+              padding: '2px 6px',
+              fontSize: '10px'
+            }}>
+              {cartItemsCount}
+            </span>
+          )}
+        </button>
+      </div>
 
-        {/* Coluna direita: Carrinho e finalização */}
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ color: '#D95A1A', marginBottom: '16px' }}>🛒 Carrinho</h3>
-          
-          {cart.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>Carrinho vazio</p>
-          ) : (
-            <>
-              <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '16px' }}>
-                {cart.map(item => (
-                  <div
-                    key={`${item.id}-${item.type}`}
-                    style={{
-                      backgroundColor: '#2C2C2C',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      marginBottom: '8px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                        <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>{formatCurrency(item.price)}</p>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: '#C62828',
-                            color: 'white',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          -
-                        </button>
-                        <span style={{ minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: '#3A5F40',
-                            color: 'white',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          +
-                        </button>
-                        <button
-                          onClick={() => removeFromCart(item.id, item.type)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: '#C62828',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                    <p style={{ textAlign: 'right', margin: '8px 0 0 0', color: '#3A5F40' }}>
-                      Subtotal: {formatCurrency(item.subtotal)}
+      {/* Busca */}
+      <input
+        type="text"
+        placeholder="Buscar por nome..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: '10px',
+          border: '1px solid #3A5F40',
+          backgroundColor: '#1A1A1A',
+          color: '#E0E0E0',
+          marginBottom: '16px',
+          fontSize: '16px'
+        }}
+      />
+
+      {/* Lista de itens (sempre visível) */}
+      <div style={{ marginBottom: '16px' }}>
+        {currentItems.length === 0 ? (
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+            <p style={{ color: '#9CA3AF' }}>
+              {searchTerm ? 'Nenhum resultado encontrado.' : `Nenhum ${activeTab === 'products' ? 'produto' : 'serviço'} cadastrado.`}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {currentItems.map(item => (
+              <div
+                key={item.id}
+                style={{
+                  backgroundColor: '#1A1A1A',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 'bold', fontSize: '16px', margin: '0 0 4px 0' }}>{item.name}</p>
+                  <p style={{ color: '#D95A1A', fontSize: '18px', fontWeight: 'bold', margin: '0' }}>
+                    {formatCurrency(activeTab === 'products' ? item.sale_price : item.price)}
+                  </p>
+                  {activeTab === 'products' && (
+                    <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '4px 0 0 0' }}>
+                      Estoque: {item.quantity || 0}
                     </p>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span>Total:</span>
-                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(getTotal())}</span>
+                  )}
                 </div>
-
-                <input
-                  type="text"
-                  placeholder="Nome do cliente"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #3A5F40',
-                    backgroundColor: '#2C2C2C',
-                    color: '#E0E0E0',
-                    marginBottom: '12px'
-                  }}
-                />
-
-                <input
-                  type="text"
-                  placeholder="Telefone do cliente"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #3A5F40',
-                    backgroundColor: '#2C2C2C',
-                    color: '#E0E0E0',
-                    marginBottom: '12px'
-                  }}
-                />
-
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #3A5F40',
-                    backgroundColor: '#2C2C2C',
-                    color: '#E0E0E0',
-                    marginBottom: '12px'
-                  }}
-                >
-                  <option value="cash">Dinheiro</option>
-                  <option value="pix">Pix</option>
-                  <option value="card_debit">Cartão Débito</option>
-                  <option value="card_credit">Cartão Crédito</option>
-                  <option value="installment">Parcelado</option>
-                </select>
-
-                {paymentMethod === 'installment' && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <select
-                      value={installments}
-                      onChange={(e) => setInstallments(Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        border: '1px solid #3A5F40',
-                        backgroundColor: '#2C2C2C',
-                        color: '#E0E0E0'
-                      }}
-                    >
-                      {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                        <option key={n} value={n}>{n}x de {formatCurrency(getInstallmentValue())}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <textarea
-                  placeholder="Observações"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows="2"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #3A5F40',
-                    backgroundColor: '#2C2C2C',
-                    color: '#E0E0E0',
-                    marginBottom: '16px',
-                    resize: 'vertical'
-                  }}
-                />
-
                 <button
-                  onClick={finalizeSale}
+                  onClick={() => addToCart(item, activeTab === 'products' ? 'product' : 'service')}
                   style={{
-                    width: '100%',
-                    padding: '14px',
+                    padding: '10px 20px',
                     borderRadius: '8px',
                     border: 'none',
                     backgroundColor: '#3A5F40',
                     color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
                   }}
                 >
-                  Finalizar Venda
+                  Adicionar
                 </button>
               </div>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Carrinho (modal/slide-up no mobile, sidebar no desktop) */}
+      {(showCart || window.innerWidth >= 768) && cart.length > 0 && (
+        <div style={{
+          position: window.innerWidth < 768 ? 'fixed' : 'relative',
+          bottom: window.innerWidth < 768 ? 0 : 'auto',
+          left: window.innerWidth < 768 ? 0 : 'auto',
+          right: window.innerWidth < 768 ? 0 : 'auto',
+          backgroundColor: '#1A1A1A',
+          borderRadius: '16px',
+          padding: '20px',
+          marginTop: window.innerWidth < 768 ? 0 : '16px',
+          maxHeight: window.innerWidth < 768 ? '70vh' : 'auto',
+          overflowY: 'auto',
+          zIndex: 1000,
+          borderTop: window.innerWidth < 768 ? '2px solid #D95A1A' : 'none'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ color: '#D95A1A', margin: 0 }}>🛒 Carrinho ({cart.length} itens)</h3>
+            {window.innerWidth < 768 && (
+              <button onClick={() => setShowCart(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            )}
+          </div>
+
+          {cart.map(item => (
+            <div key={`${item.id}-${item.type}`} style={{ backgroundColor: '#2C2C2C', borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
+                  <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>{formatCurrency(item.price)}</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#C62828', color: 'white', cursor: 'pointer' }}>-</button>
+                  <span style={{ minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
+                  <button onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#3A5F40', color: 'white', cursor: 'pointer' }}>+</button>
+                  <button onClick={() => removeFromCart(item.id, item.type)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: 'transparent', color: '#C62828', cursor: 'pointer' }}>✕</button>
+                </div>
+              </div>
+              <p style={{ textAlign: 'right', margin: '8px 0 0 0', color: '#3A5F40' }}>Subtotal: {formatCurrency(item.subtotal)}</p>
+            </div>
+          ))}
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span style={{ fontSize: '16px' }}>Total:</span>
+              <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(getTotal())}</span>
+            </div>
+
+            <input type="text" placeholder="Nome do cliente" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px', fontSize: '16px' }} />
+            <input type="text" placeholder="Telefone do cliente" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px', fontSize: '16px' }} />
+
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}>
+              <option value="cash">Dinheiro</option>
+              <option value="pix">Pix</option>
+              <option value="card_debit">Cartão Débito</option>
+              <option value="card_credit">Cartão Crédito</option>
+              <option value="installment">Parcelado</option>
+            </select>
+
+            {paymentMethod === 'installment' && (
+              <select value={installments} onChange={(e) => setInstallments(Number(e.target.value))} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}>
+                {[2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n}x de {formatCurrency(getInstallmentValue())}</option>)}
+              </select>
+            )}
+
+            <textarea placeholder="Observações" value={notes} onChange={(e) => setNotes(e.target.value)} rows="2" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '16px', resize: 'vertical' }} />
+
+            <button onClick={finalizeSale} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', backgroundColor: '#3A5F40', color: 'white', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>Finalizar Venda</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

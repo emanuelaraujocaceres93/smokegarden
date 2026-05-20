@@ -1,7 +1,7 @@
 ﻿{
-  "name": "Smoke Garden - Mecânica 2 Tempos",
+  "name": "Smoke Garden",
   "short_name": "Smoke Garden",
-  "description": "Sistema de gestão para mecânica especializada em motores 2 tempos",
+  "description": "Sistema de gestão para mecânica 2 tempos",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#D95A1A",
@@ -13,11 +13,6 @@
       "sizes": "any",
       "type": "image/jpeg",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
     }
   ]
 }
