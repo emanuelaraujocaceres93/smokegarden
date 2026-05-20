@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import '../styles/layout.css'
+import '/src/styles/layout.css'  // ← CAMINHO ABSOLUTO
 import {
   BarChart3,
   Clock3,
