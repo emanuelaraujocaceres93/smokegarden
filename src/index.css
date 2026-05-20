@@ -1,12 +1,15 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+﻿html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
-  background-color: #2C2C2C;
+  margin: 0;
+  background: #2C2C2C;
   color: #E0E0E0;
-  font-family: system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
+}
+
+button {
+  font: inherit;
 }

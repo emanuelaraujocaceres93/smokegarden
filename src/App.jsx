@@ -1,52 +1,54 @@
-import React from 'react'
+﻿import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { CartProvider } from './contexts/CartContext'
+import Layout from './components/Layout/Layout'
+import Dashboard from './pages/dashboard/Dashboard'
+import Products from './pages/products/Products'
+import Services from './pages/services/Services'
+import Sales from './pages/sales/Sales'
+import PendingPayments from './pages/pending/PendingPayments'
+import Reports from './pages/reports/Reports'
 import Login from './pages/auth/Login'
+import Loading from './components/ui/Loading'
 
-function AppContent() {
-  const { user, loading } = useAuth()
+function AppRoutes() {
+  const { user, loading, logout } = useAuth()
 
   if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#2C2C2C',
-        color: '#E0E0E0'
-      }}>
-        Carregando...
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <Login />
+    return <Loading message="Verificando sessão..." />
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#2C2C2C',
-      color: '#E0E0E0'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <h1 style={{ color: '#D95A1A' }}>Dashboard</h1>
-        <p>Bem-vindo, {user.email}!</p>
-        <p style={{ color: '#3A5F40' }}>✅ Autenticação funcionando!</p>
-        <p>Próximo passo: criar o Dashboard completo</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Toaster position="top-right" />
+      <Routes>
+        <Route
+          path="/login"
+          element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
+        />
+        <Route element={user ? <Layout user={user} onLogout={logout} /> : <Navigate to="/login" replace />}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/sales" element={<Sales />} />
+          <Route path="/pending" element={<PendingPayments />} />
+          <Route path="/reports" element={<Reports />} />
+        </Route>
+        <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CartProvider>
+        <AppRoutes />
+      </CartProvider>
     </AuthProvider>
   )
 }

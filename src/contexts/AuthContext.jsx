@@ -1,41 +1,56 @@
-import React, { createContext, useState, useContext, useEffect } from 'react'
+﻿import React, { createContext, useState, useContext, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
-const AuthContext = createContext()
+const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar sessão atual
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      setUser(data.session?.user ?? null)
+      setLoading(false)
+    }
+
+    loadSession()
+
+    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Ouvir mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      if (!authListener) return
+      if (typeof authListener.unsubscribe === 'function') {
+        authListener.unsubscribe()
+      } else if (authListener.data?.subscription?.unsubscribe) {
+        authListener.data.subscription.unsubscribe()
+      }
+    }
   }, [])
 
   const login = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      alert('Erro: ' + error.message)
+      toast.error('Email ou senha incorretos')
       return false
     }
-    alert('Login realizado com sucesso!')
+
+    toast.success('Login realizado com sucesso')
     return true
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    alert('Logout realizado')
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      toast.error('Falha ao sair: ' + error.message)
+      return
+    }
+    setUser(null)
+    toast.success('Logout realizado com sucesso')
   }
 
   return (
@@ -45,4 +60,10 @@ export function AuthProvider({ children }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de AuthProvider')
+  }
+  return context
+}
