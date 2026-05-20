@@ -20,8 +20,6 @@ const Reports = () => {
   const [paymentMethods, setPaymentMethods] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [topServices, setTopServices] = useState([])
-  const [lowStockList, setLowStockList] = useState([])
-  const [staleProducts, setStaleProducts] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(null)
   const reportRef = useRef(null)
 
@@ -73,8 +71,6 @@ const Reports = () => {
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
     
-    const { data: allProducts } = await supabase.from('products').select('*')
-    
     const { data: paidBills } = await supabase
       .from('bills_to_pay')
       .select('*')
@@ -101,14 +97,6 @@ const Reports = () => {
     const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
     const expensesPending = (pendingBillsData || []).reduce((sum, b) => sum + b.amount, 0)
     const netProfit = received - expensesPaid
-    
-    const lowStock = (allProducts || []).filter(p => p.quantity <= (p.min_stock || 5))
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    const stale = (allProducts || []).filter(p => {
-      if (!p.last_sold_at) return true
-      return new Date(p.last_sold_at) < sixMonthsAgo
-    })
     
     const methods = {}
     ;(allSales || []).forEach(sale => {
@@ -155,8 +143,6 @@ const Reports = () => {
     setPaymentMethods(methodsFormatted)
     setTopProducts(topProductsList)
     setTopServices(topServicesList)
-    setLowStockList(lowStock.slice(0, 10))
-    setStaleProducts(stale.slice(0, 10))
     setStats({
       totalSales: (allSales || []).length,
       grossRevenue: grossRevenue,
@@ -195,6 +181,7 @@ const Reports = () => {
 
   return (
     <div ref={reportRef} style={{ padding: '16px' }}>
+      {/* Cabeçalho */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
@@ -203,12 +190,14 @@ const Reports = () => {
         <button onClick={generatePDF} style={{ padding: '10px 20px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📄 Exportar PDF</button>
       </div>
 
+      {/* Filtros */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {periods.map(p => (
           <button key={p.value} onClick={() => setPeriod(p.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: period === p.value ? 'none' : '1px solid #3A5F40', backgroundColor: period === p.value ? '#3A5F40' : 'transparent', color: period === p.value ? 'white' : '#E0E0E0', cursor: 'pointer' }}>{p.label}</button>
         ))}
       </div>
 
+      {/* Cards Financeiros */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '11px' }}>💰 Faturamento</p>
@@ -236,30 +225,7 @@ const Reports = () => {
         </div>
       </div>
 
-      {lowStockList.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#F9A825', fontSize: '16px', marginBottom: '12px' }}>⚠️ Produtos com Estoque Baixo</h3>
-          {lowStockList.map(p => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <span>{p.name}</span>
-              <span style={{ color: '#F9A825' }}>Estoque: {p.quantity}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {staleProducts.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#C62828', fontSize: '16px', marginBottom: '12px' }}>📦 Produtos Parados (+6 meses)</h3>
-          {staleProducts.map(p => (
-            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <span>{p.name}</span>
-              <span>Estoque: {p.quantity}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
+      {/* Métodos de Pagamento */}
       {paymentMethods.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
           <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>💳 Métodos de Pagamento</h3>
@@ -274,32 +240,7 @@ const Reports = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {topProducts.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🏆 Produtos Mais Vendidos</h3>
-            {topProducts.map((p, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topProducts.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span>{p.name}</span>
-                <span style={{ color: '#F9A825' }}>{p.quantity} und</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {topServices.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🔧 Serviços Mais Vendidos</h3>
-            {topServices.map((s, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topServices.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span>{s.name}</span>
-                <span style={{ color: '#F9A825' }}>{s.quantity} und</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
+      {/* Lista de Vendas com botão excluir */}
       {sales.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
           <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📋 Lista de Vendas</h3>
@@ -336,6 +277,7 @@ const Reports = () => {
         </div>
       )}
 
+      {/* Modal de exclusão */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
