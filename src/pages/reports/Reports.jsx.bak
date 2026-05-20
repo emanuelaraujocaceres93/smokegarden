@@ -1,266 +1,313 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from 'recharts'
-import { format, parseISO, startOfMonth, subDays } from 'date-fns'
-import toast from 'react-hot-toast'
+﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Loading from '../../components/ui/Loading'
-
-const periodOptions = [
-  { key: '30', label: 'Últimos 30 dias' },
-  { key: '60', label: 'Últimos 60 dias' },
-  { key: '90', label: 'Últimos 90 dias' },
-  { key: 'month', label: 'Este mês' },
-  { key: 'previous', label: 'Mês passado' }
-]
+import { format, subDays, subWeeks, subMonths, subYears, startOfDay, endOfDay } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import Papa from 'papaparse'
 
 const Reports = () => {
-  const [sales, setSales] = useState([])
-  const [saleItems, setSaleItems] = useState([])
-  const [products, setProducts] = useState([])
-  const [period, setPeriod] = useState('30')
   const [loading, setLoading] = useState(true)
+  const [period, setPeriod] = useState('month')
+  const [sales, setSales] = useState([])
+  const [products, setProducts] = useState([])
+  const [stats, setStats] = useState({
+    totalSales: 0,
+    totalProducts: 0,
+    totalServices: 0,
+    averageTicket: 0,
+    topProduct: null,
+    topService: null
+  })
+  const [salesData, setSalesData] = useState([])
+  const [showExportModal, setShowExportModal] = useState(false)
+
+  const periods = [
+    { value: 'day', label: 'Hoje', days: 1 },
+    { value: 'week', label: 'Semana', days: 7 },
+    { value: 'twoWeeks', label: 'Quinzena', days: 15 },
+    { value: 'month', label: 'Mês', days: 30 },
+    { value: 'quarter', label: 'Trimestre', days: 90 },
+    { value: 'semester', label: 'Semestre', days: 180 },
+    { value: 'year', label: 'Ano', days: 365 }
+  ]
 
   useEffect(() => {
-    loadData()
+    fetchData()
   }, [period])
 
-  const loadData = async () => {
+  const getDateRange = () => {
+    const end = new Date()
+    let start = new Date()
+    
+    switch(period) {
+      case 'day': start = startOfDay(end); break
+      case 'week': start = subDays(end, 7); break
+      case 'twoWeeks': start = subDays(end, 15); break
+      case 'month': start = subMonths(end, 1); break
+      case 'quarter': start = subMonths(end, 3); break
+      case 'semester': start = subMonths(end, 6); break
+      case 'year': start = subYears(end, 1); break
+      default: start = subMonths(end, 1)
+    }
+    
+    return { start: startOfDay(start), end: endOfDay(end) }
+  }
+
+  const fetchData = async () => {
     setLoading(true)
-    const now = new Date()
-    let fromDate = subDays(now, Number(period))
-
-    if (period === 'month') {
-      fromDate = startOfMonth(now)
-    }
-
-    if (period === 'previous') {
-      fromDate = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1))
-    }
-
-    const [salesResult, itemsResult, productsResult] = await Promise.all([
-      supabase.from('sales').select('*').gte('created_at', fromDate.toISOString()),
-      supabase.from('sale_items').select('*'),
-      supabase.from('products').select('*')
-    ])
-
-    if (salesResult.error) {
-      toast.error('Erro ao carregar vendas: ' + salesResult.error.message)
-      setSales([])
-    } else {
-      setSales(salesResult.data || [])
-    }
-
-    if (itemsResult.error) {
-      toast.error('Erro ao carregar itens de venda: ' + itemsResult.error.message)
-      setSaleItems([])
-    } else {
-      setSaleItems(itemsResult.data || [])
-    }
-
-    if (productsResult.error) {
-      toast.error('Erro ao carregar produtos: ' + productsResult.error.message)
-      setProducts([])
-    } else {
-      setProducts(productsResult.data || [])
-    }
-
+    
+    const { start, end } = getDateRange()
+    
+    const { data: allSales } = await supabase
+      .from('sales')
+      .select('*')
+      .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
+      .order('created_at', { ascending: false })
+    
+    const { data: allProducts } = await supabase.from('products').select('*')
+    const { data: allServices } = await supabase.from('services').select('*')
+    const { data: saleItems } = await supabase.from('sale_items').select('*')
+    
+    setSales(allSales || [])
+    setProducts(allProducts || [])
+    
+    const totalSalesAmount = (allSales || []).reduce((sum, s) => sum + s.total_amount, 0)
+    const averageTicket = (allSales || []).length > 0 ? totalSalesAmount / (allSales || []).length : 0
+    
+    const productSales = {}
+    saleItems?.filter(i => i.item_type === 'product').forEach(item => {
+      productSales[item.item_name] = (productSales[item.item_name] || 0) + item.quantity
+    })
+    
+    const topProduct = Object.entries(productSales).sort((a,b) => b[1] - a[1])[0]
+    
+    setStats({
+      totalSales: (allSales || []).length,
+      totalProducts: (allProducts || []).length,
+      totalServices: (allServices || []).length,
+      totalSalesAmount: totalSalesAmount,
+      averageTicket: averageTicket,
+      topProduct: topProduct ? { name: topProduct[0], quantity: topProduct[1] } : null
+    })
+    
+    setSalesData(allSales || [])
     setLoading(false)
   }
 
-  const topSoldProducts = useMemo(() => {
-    const counts = {}
-    saleItems.forEach((item) => {
-      if (!item.item_name) return
-      counts[item.item_name] = (counts[item.item_name] || 0) + Number(item.quantity || 0)
-    })
-    return Object.entries(counts)
-      .map(([name, quantity]) => ({ name, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 8)
-  }, [saleItems])
+  const formatCurrency = (value) => {
+    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
 
-  const revenueByMonth = useMemo(() => {
-    const map = {}
-    sales.forEach((sale) => {
-      const date = sale.created_at ? parseISO(sale.created_at) : new Date()
-      const key = format(date, 'yyyy-MM')
-      const label = format(date, 'MMM/yyyy')
-      map[key] = map[key] || { label, value: 0 }
-      map[key].value += Number(sale.total_amount || 0)
-    })
-    return Object.values(map).sort((a, b) => (a.label > b.label ? 1 : -1))
-  }, [sales])
-
-  const revenueTotal = useMemo(
-    () => sales.reduce((sum, sale) => sum + Number(sale.total_amount || 0), 0),
-    [sales]
-  )
-
-  const lowStock = useMemo(
-    () => products.filter((product) => Number(product.quantity || 0) <= Number(product.min_stock || 5)).slice(0, 8),
-    [products]
-  )
-
-  const staleProducts = useMemo(() => {
-    const threshold = subDays(new Date(), 180)
-    return products.filter((product) => {
-      if (!product.last_sold_at) return true
-      return parseISO(product.last_sold_at) < threshold
-    }).slice(0, 8)
-  }, [products])
-
-  const exportCsv = (filename, rows) => {
-    const content = rows.map((row) => row.join(',')).join('\n')
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const exportToCSV = () => {
+    const csvData = salesData.map(sale => ({
+      'Data': format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm'),
+      'Cliente': sale.customer_name || 'Não informado',
+      'Telefone': sale.customer_phone || 'Não informado',
+      'Total': sale.total_amount,
+      'Forma de Pagamento': sale.payment_method || 'Não informado',
+      'Status': sale.status === 'completed' ? 'Pago' : 'Pendente',
+      'Observações': sale.notes || ''
+    }))
+    
+    const csv = Papa.unparse(csvData, { delimiter: ';' })
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.href = url
-    link.download = filename
+    link.setAttribute('download', `relatorio_vendas_${format(new Date(), 'yyyy-MM-dd')}.csv`)
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
   if (loading) {
-    return <Loading message="Carregando relatórios..." />
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Relatórios</h1>
-          <p className="page-description">Acompanhe faturamento, produtos mais vendidos e itens em risco de ruptura.</p>
-        </div>
-        <Button variant="secondary" size="md" onClick={() => exportCsv('produtos_vendidos.csv', [['Nome', 'Quantidade'], ...topSoldProducts.map((item) => [item.name, String(item.quantity)])])}>
-          Exportar CSV
-        </Button>
+    <div style={{ padding: '16px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
       </div>
 
-      <div className="flex-row" style={{ flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-        {periodOptions.map((option) => (
-          <Button
-            key={option.key}
-            variant={period === option.key ? 'secondary' : 'warning'}
-            size="sm"
-            onClick={() => setPeriod(option.key)}
+      {/* Filtros rápidos */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
+        {periods.map(p => (
+          <button
+            key={p.value}
+            onClick={() => setPeriod(p.value)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: period === p.value ? 'none' : '1px solid #3A5F40',
+              backgroundColor: period === p.value ? '#3A5F40' : 'transparent',
+              color: period === p.value ? 'white' : '#E0E0E0',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
           >
-            {option.label}
-          </Button>
+            {p.label}
+          </button>
         ))}
+        
+        <button
+          onClick={() => setShowExportModal(true)}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: '1px solid #D95A1A',
+            backgroundColor: '#D95A1A',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          📥 Exportar CSV
+        </button>
       </div>
 
-      <div className="panel-row panel-row-3" style={{ marginBottom: 20 }}>
-        <Card>
-          <div style={{ color: 'rgba(224,224,224,.72)', marginBottom: 8 }}>Faturamento</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: '#3A5F40' }}>R$ {revenueTotal.toFixed(2)}</div>
-        </Card>
-        <Card>
-          <div style={{ color: 'rgba(224,224,224,.72)', marginBottom: 8 }}>Produtos mais vendidos</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: '#D95A1A' }}>{topSoldProducts.length}</div>
-        </Card>
-        <Card>
-          <div style={{ color: 'rgba(224,224,224,.72)', marginBottom: 8 }}>Estoque baixo</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: '#F9A825' }}>{lowStock.length}</div>
-        </Card>
+      {/* Cards de estatísticas */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px',
+        marginBottom: '32px'
+      }}>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px' }}>💰</div>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Total de Vendas</p>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#3A5F40' }}>{stats.totalSales}</p>
+        </div>
+        
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px' }}>💵</div>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Faturamento</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.totalSalesAmount)}</p>
+        </div>
+        
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px' }}>🎫</div>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Ticket Médio</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.averageTicket)}</p>
+        </div>
+        
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '8px' }}>📦</div>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>Produtos/Serviços</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#3A5F40' }}>{stats.totalProducts + stats.totalServices}</p>
+        </div>
       </div>
 
-      <div className="panel-row panel-row-2" style={{ marginBottom: 20 }}>
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Produtos mais vendidos</h2>
+      {/* Produto mais vendido */}
+      {stats.topProduct && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '12px' }}>🏆 Produto Mais Vendido</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{stats.topProduct.name}</span>
+            <span style={{ color: '#F9A825', fontSize: '24px', fontWeight: 'bold' }}>{stats.topProduct.quantity} unidades</span>
           </div>
-          {topSoldProducts.length === 0 ? (
-            <p style={{ color: 'rgba(224,224,224,.72)' }}>Nenhum produto vendido no período.</p>
-          ) : (
-            <div style={{ width: '100%', minHeight: 300 }}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topSoldProducts} margin={{ right: 20 }}>
-                  <CartesianGrid stroke="#333" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" stroke="#E0E0E0" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#E0E0E0" />
-                  <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: 'none', color: '#E0E0E0' }} />
-                  <Bar dataKey="quantity" fill="#D95A1A" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
+        </div>
+      )}
 
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Faturamento por mês</h2>
+      {/* Lista de vendas */}
+      {salesData.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '12px' }}>📋 Vendas do Período</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#9CA3AF', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '8px' }}>Data</th>
+                  <th style={{ padding: '8px' }}>Cliente</th>
+                  <th style={{ padding: '8px' }}>Total</th>
+                  <th style={{ padding: '8px' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesData.slice(0, 10).map((sale) => (
+                  <tr key={sale.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '8px' }}>{format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm')}</td>
+                    <td style={{ padding: '8px' }}>{sale.customer_name || '—'}</td>
+                    <td style={{ padding: '8px', color: '#3A5F40', fontWeight: 'bold' }}>{formatCurrency(sale.total_amount)}</td>
+                    <td style={{ padding: '8px' }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        backgroundColor: sale.status === 'completed' ? '#2E7D3222' : '#C6282822',
+                        color: sale.status === 'completed' ? '#2E7D32' : '#C62828'
+                      }}>
+                        {sale.status === 'completed' ? 'Pago' : 'Pendente'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {revenueByMonth.length === 0 ? (
-            <p style={{ color: 'rgba(224,224,224,.72)' }}>Sem dados para o período selecionado.</p>
-          ) : (
-            <div style={{ width: '100%', minHeight: 300 }}>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={revenueByMonth} margin={{ right: 10 }}>
-                  <CartesianGrid stroke="#333" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" stroke="#E0E0E0" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#E0E0E0" />
-                  <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: 'none', color: '#E0E0E0' }} />
-                  <Line type="monotone" dataKey="value" stroke="#3A5F40" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          {salesData.length > 10 && (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '12px', marginTop: '12px' }}>
+              Mostrando 10 de {salesData.length} vendas. Exporte o CSV para ver todas.
+            </p>
           )}
-        </Card>
-      </div>
+        </div>
+      )}
 
-      <div className="panel-row panel-row-2" style={{ gap: 20 }}>
-        <Card>
-          <div className="card-header" style={{ marginBottom: 16 }}>
-            <h2 className="card-title">Produtos parados</h2>
-          </div>
-          {staleProducts.length === 0 ? (
-            <p style={{ color: 'rgba(224,224,224,.72)' }}>Nenhum produto sem venda nos últimos 6 meses.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {staleProducts.map((product) => (
-                <div key={product.id} style={{ padding: 14, borderRadius: 16, background: '#262626' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <strong>{product.name}</strong>
-                    <span style={{ color: '#D95A1A' }}>Estoque {product.quantity}</span>
-                  </div>
-                </div>
-              ))}
+      {/* Modal de Exportação */}
+      {showExportModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
+            <h2 style={{ color: '#D95A1A', fontSize: '20px', marginBottom: '16px' }}>Exportar Relatório</h2>
+            <p style={{ color: '#9CA3AF', marginBottom: '20px' }}>
+              O relatório será exportado com todos os dados do período selecionado.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  exportToCSV()
+                  setShowExportModal(false)
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  backgroundColor: '#3A5F40',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Confirmar Exportação
+              </button>
+              <button
+                onClick={() => setShowExportModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  backgroundColor: 'transparent',
+                  color: '#C62828',
+                  border: '1px solid #C62828',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
             </div>
-          )}
-        </Card>
-
-        <Card>
-          <div className="card-header" style={{ marginBottom: 16 }}>
-            <h2 className="card-title">Produtos em ruptura</h2>
           </div>
-          {lowStock.length === 0 ? (
-            <p style={{ color: 'rgba(224,224,224,.72)' }}>Nenhum produto abaixo do estoque mínimo.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {lowStock.map((product) => (
-                <div key={product.id} style={{ padding: 14, borderRadius: 16, background: '#262626' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <strong>{product.name}</strong>
-                    <span style={{ color: '#F9A825' }}>Mínimo {product.min_stock || 5}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
