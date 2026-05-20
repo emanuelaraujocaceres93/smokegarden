@@ -1,39 +1,36 @@
-﻿import React from 'react'
+﻿import React, { useState } from 'react'
 
-const variantMap = {
-  primary: 'btn-primary',
-  secondary: 'btn-secondary',
-  danger: 'btn-danger',
-  warning: 'btn-warning'
-}
-
-const sizeMap = {
-  sm: 'btn-sm',
-  md: 'btn-md',
-  lg: 'btn-lg'
-}
-
-export default function Button({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  disabled = false,
-  className = '',
-  children,
-  ...props
-}) {
-  const variantClass = variantMap[variant] || variantMap.primary
-  const sizeClass = sizeMap[size] || sizeMap.md
-  const isDisabled = disabled || loading
-
+const Button = ({ children, onClick, type = 'button', variant = 'primary' }) => {
+  const [hover, setHover] = useState(false)
+  
+  const colors = {
+    primary: { bg: '#D95A1A', hover: '#b75419' },
+    secondary: { bg: '#3A5F40', hover: '#2f6d3a' },
+    danger: { bg: '#C62828', hover: '#a32220' }
+  }
+  
+  const color = colors[variant] || colors.primary
+  
   return (
     <button
-      className={`btn ${variantClass} ${sizeClass} ${className}`.trim()}
-      disabled={isDisabled}
-      {...props}
+      type={type}
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        backgroundColor: hover ? color.hover : color.bg,
+        color: 'white',
+        padding: '8px 16px',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: '500',
+        transition: 'all 0.2s ease'
+      }}
     >
-      {loading ? <span className="btn-spinner" /> : null}
-      <span>{children}</span>
+      {children}
     </button>
   )
 }
+
+export default Button

@@ -2,12 +2,19 @@
 
 const PageHeader = ({ title, description, actions }) => {
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: '16px',
+      marginBottom: '24px'
+    }}>
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-burnt">{title}</h1>
-        {description && <p className="text-grayLight text-sm mt-1">{description}</p>}
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>{title}</h1>
+        {description && <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>{description}</p>}
       </div>
-      {actions && <div className="w-full md:w-auto">{actions}</div>}
+      {actions && <div style={{ width: '100%' }}>{actions}</div>}
     </div>
   )
 }
