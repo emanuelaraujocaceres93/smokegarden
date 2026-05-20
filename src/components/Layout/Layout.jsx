@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
   Clock3,
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 
 const navigation = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
   { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
@@ -24,7 +24,7 @@ const navigation = [
   { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' }
 ]
 
-export default function Layout({ user, onLogout }) {
+export default function Layout({ user, onLogout, children }) {
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
   const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
   const displayEmail = user?.email ?? 'administrador@smoke.com'
@@ -104,7 +104,7 @@ export default function Layout({ user, onLogout }) {
           </div>
         </header>
         <main className="page-main">
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>

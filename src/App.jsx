@@ -35,8 +35,8 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      <Route element={<Layout user={user} onLogout={logout} />}>
+    <Layout user={user} onLogout={logout}>
+      <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/products" element={<Products />} />
@@ -46,8 +46,8 @@ function AppContent() {
         <Route path="/reports" element={<Reports />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/suppliers" element={<Suppliers />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </Layout>
   )
 }
 
