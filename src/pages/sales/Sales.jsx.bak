@@ -37,10 +37,9 @@ const Sales = () => {
     setLoading(false)
   }
 
-  const addToCart = (item, type) => {
+    const addToCart = (item, type) => {
     const price = type === 'product' ? item.sale_price : item.price
-    const purchasePrice = type === 'product' ? item.purchase_price : 0
-    const price = type === 'product' ? item.sale_price : item.price
+    const purchasePrice = type === 'product' ? (item.purchase_price || 0) : 0
     
     if (type === 'product' && item.quantity <= 0) {
       toast.error('Produto sem estoque!')
@@ -56,11 +55,12 @@ const Sales = () => {
           : i
       ))
     } else {
-          setCart([...cart, {
+      setCart([...cart, {
         id: item.id,
         type: type,
         name: item.name,
-        price: price, purchase_price: purchasePrice,
+        price: price,
+        purchase_price: purchasePrice,
         quantity: 1,
         subtotal: price
       }])
@@ -439,4 +439,5 @@ const Sales = () => {
 }
 
 export default Sales
+
 

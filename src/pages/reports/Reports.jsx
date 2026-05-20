@@ -125,36 +125,7 @@ const Reports = () => {
     
     // CÁLCULOS
     const grossRevenue = (allSales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
-    const totalCost = (saleItems || []).reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)
-    const grossProfit = grossRevenue - totalCost
-    
-    // Calcular taxas sobre o recebido (não faturamento, pois taxas incidem sobre valor recebido)
-    const received = (allSales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
-    let fees = 0
-    if (feesConfig) {
-      for (const sale of allSales || []) {
-        const feeConfig = feesConfig.find(f => f.payment_method === sale.payment_method)
-        if (feeConfig && feeConfig.fee_percent) {
-          fees += (sale.paid_amount || 0) * (feeConfig.fee_percent / 100)
-        }
-      }
-    }
-    
-    // Impostos sobre faturamento (configurável)
-    let taxes = 0
-    if (taxesConfig) {
-      for (const tax of taxesConfig) {
-        taxes += grossRevenue * (tax.rate_percent / 100)
-      }
-    }
-    
-    const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
-    const netProfit = grossProfit - fees - taxes - expensesPaid
-    const netMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0
-    
-    // Métodos de pagamento
-    const methods = {}
-    ;(allSales || []).forEach(sale => {
+        const totalCost = (saleItems || []).reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)(allSales || []).forEach(sale => {
       const method = sale.payment_method || 'outro'
       methods[method] = (methods[method] || 0) + 1
     })
@@ -523,3 +494,4 @@ const Reports = () => {
 }
 
 export default Reports
+

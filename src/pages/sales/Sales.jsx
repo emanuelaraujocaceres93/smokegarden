@@ -37,7 +37,7 @@ const Sales = () => {
     setLoading(false)
   }
 
-    const addToCart = (item, type) => {
+      const addToCart = (item, type) => {
     const price = type === 'product' ? item.sale_price : item.price
     const purchasePrice = type === 'product' ? (item.purchase_price || 0) : 0
     
@@ -129,14 +129,14 @@ const Sales = () => {
     const saleId = sale[0].id
 
     for (const item of cart) {
-            const itemData = {
-        purchase_price: item.purchase_price || 0,
+                  const itemData = {
         sale_id: saleId,
         item_type: item.type,
         item_id: item.id,
         item_name: item.name,
         quantity: item.quantity,
         unit_price: item.price,
+        purchase_price: item.purchase_price || 0,
         subtotal: item.subtotal
       }
       
@@ -439,5 +439,6 @@ const Sales = () => {
 }
 
 export default Sales
+
 
 
