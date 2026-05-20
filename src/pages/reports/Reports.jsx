@@ -2,8 +2,9 @@
 import { supabase } from '../../lib/supabase'
 import { format, subDays, subMonths, startOfDay, endOfDay } from 'date-fns'
 import toast from 'react-hot-toast'
+import html2pdf from 'html2pdf.js'
 
-const Reports = () => {
+const Reports = () => {$generatePDF
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('month')
   const [sales, setSales] = useState([])
@@ -141,11 +142,11 @@ const Reports = () => {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
   }
 
-  return (
+  return (<div ref={reportRef}>
     <div style={{ padding: '16px' }}>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}><div><h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1></div><button onClick={generatePDF} style={{ padding: "10px 20px", backgroundColor: "#D95A1A", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", display: "flex", alignItems: "center", gap: "8px" }}>📄 Exportar PDF</button></div>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
       </div>
 
@@ -303,3 +304,4 @@ const Reports = () => {
 }
 
 export default Reports
+
