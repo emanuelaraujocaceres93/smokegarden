@@ -161,102 +161,147 @@ const Products = () => {
         </button>
       </div>
 
-      {/* Tabela de Produtos */}
-      <div className="bg-carbon rounded-lg overflow-hidden border border-gray-700">
+      {/* Versão Desktop: Tabela */}
+      <div className="table-desktop-only bg-carbon rounded-lg overflow-hidden border border-gray-700">
         <div className="overflow-x-auto">
-          <div className="min-w-[800px] md:min-w-full">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-smoke border-b-2 border-gray-600">
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Produto</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Compra</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Venda</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque Mínimo</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Validade</th>
-                  <th className="py-3 px-4 text-left text-grayLight font-semibold">Ações</th>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-smoke border-b-2 border-gray-600">
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Produto</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Compra</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Venda</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque Mínimo</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Validade</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-grayLight">
+                    Nenhum produto cadastrado.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {products.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="py-8 text-center text-grayLight">
-                      Nenhum produto cadastrado.
+              ) : (
+                products.map((product, index) => (
+                  <tr 
+                    key={product.id} 
+                    className={`border-b border-gray-700 hover:bg-smoke/30 transition-colors ${
+                      index % 2 === 0 ? 'bg-carbon' : 'bg-smoke/10'
+                    }`}
+                  >
+                    <td className="py-3 px-4 border-r border-gray-700">
+                      <div className="font-medium text-white">{product.name}</div>
+                      {product.description && (
+                        <div className="text-xs text-gray-400 mt-1">{product.description}</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                      R$ {product.purchase_price?.toFixed(2) || '0.00'}
+                    </td>
+                    <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                      R$ {product.sale_price?.toFixed(2) || '0.00'}
+                    </td>
+                    <td className="py-3 px-4 border-r border-gray-700">
+                      <span className={`font-semibold ${
+                        product.quantity <= (product.min_stock || 5) 
+                          ? 'text-yellow-400' 
+                          : 'text-green-400'
+                      }`}>
+                        {product.quantity || 0}
+                      </span>
+                      {product.quantity <= (product.min_stock || 5) && (
+                        <span className="ml-2 text-xs text-yellow-500">(baixo)</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                      {product.min_stock || 5}
+                    </td>
+                    <td className="py-3 px-4 border-r border-gray-700">
+                      {product.has_expiry && product.expiry_date ? (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          isExpired(product.expiry_date) 
+                            ? 'bg-red-900 text-red-300' 
+                            : isExpiringSoon(product.expiry_date) 
+                              ? 'bg-yellow-900 text-yellow-300' 
+                              : 'bg-green-900 text-green-300'
+                        }`}>
+                          {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="text-garden hover:text-green-400 mr-3 transition font-medium"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="text-red-500 hover:text-red-400 transition font-medium"
+                      >
+                        Excluir
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  products.map((product, index) => (
-                    <tr 
-                      key={product.id} 
-                      className={`border-b border-gray-700 hover:bg-smoke/30 transition-colors ${
-                        index % 2 === 0 ? 'bg-carbon' : 'bg-smoke/10'
-                      }`}
-                    >
-                      <td className="py-3 px-4 border-r border-gray-700">
-                        <div className="font-medium text-white">{product.name}</div>
-                        {product.description && (
-                          <div className="text-xs text-gray-400 mt-1">{product.description}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
-                        R$ {product.purchase_price?.toFixed(2) || '0.00'}
-                      </td>
-                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
-                        R$ {product.sale_price?.toFixed(2) || '0.00'}
-                      </td>
-                      <td className="py-3 px-4 border-r border-gray-700">
-                        <span className={`font-semibold ${
-                          product.quantity <= (product.min_stock || 5) 
-                            ? 'text-yellow-400' 
-                            : 'text-green-400'
-                        }`}>
-                          {product.quantity || 0}
-                        </span>
-                        {product.quantity <= (product.min_stock || 5) && (
-                          <span className="ml-2 text-xs text-yellow-500">(baixo)</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
-                        {product.min_stock || 5}
-                      </td>
-                      <td className="py-3 px-4 border-r border-gray-700">
-                        {product.has_expiry && product.expiry_date ? (
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            isExpired(product.expiry_date) 
-                              ? 'bg-red-900 text-red-300' 
-                              : isExpiringSoon(product.expiry_date) 
-                                ? 'bg-yellow-900 text-yellow-300' 
-                                : 'bg-green-900 text-green-300'
-                          }`}>
-                            {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
-                            {isExpired(product.expiry_date) && ' (Vencido)'}
-                            {isExpiringSoon(product.expiry_date) && !isExpired(product.expiry_date) && ' (Vence em breve)'}
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="text-garden hover:text-green-400 mr-3 transition font-medium"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="text-red-500 hover:text-red-400 transition font-medium"
-                        >
-                          Excluir
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
+
+      {/* Versão Mobile: Cards */}
+      <div className="cards-mobile-only">
+        {products.length === 0 ? (
+          <div className="text-center text-grayLight py-8">Nenhum produto cadastrado.</div>
+        ) : (
+          products.map((product) => (
+            <div key={product.id} className="product-card-mobile">
+              <div className="product-card-header">
+                <span className="product-card-name">{product.name}</span>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  product.quantity <= (product.min_stock || 5) ? 'bg-yellow-900 text-yellow-300' : 'bg-green-900 text-green-300'
+                }`}>
+                  Estoque: {product.quantity}
+                </span>
+              </div>
+              {product.description && (
+                <div className="text-xs text-gray-400 mb-2">{product.description}</div>
+              )}
+              <div className="product-card-row">
+                <span className="product-card-label">Preço Compra</span>
+                <span className="product-card-value">R$ {product.purchase_price?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="product-card-row">
+                <span className="product-card-label">Preço Venda</span>
+                <span className="product-card-value">R$ {product.sale_price?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="product-card-row">
+                <span className="product-card-label">Estoque Mínimo</span>
+                <span className="product-card-value">{product.min_stock || 5}</span>
+              </div>
+              {product.has_expiry && product.expiry_date && (
+                <div className="product-card-row">
+                  <span className="product-card-label">Validade</span>
+                  <span className={`product-card-value ${
+                    isExpired(product.expiry_date) ? 'text-red-400' : isExpiringSoon(product.expiry_date) ? 'text-yellow-400' : 'text-green-400'
+                  }`}>
+                    {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              )}
+              <div className="product-card-actions">
+                <button onClick={() => handleEdit(product)} className="text-garden hover:text-green-400">Editar</button>
+                <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-400">Excluir</button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Modal de Cadastro/Edição */}
