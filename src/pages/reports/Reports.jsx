@@ -19,7 +19,7 @@ const Reports = () => {
   })
   const [paymentMethods, setPaymentMethods] = useState([])
   const [topProducts, setTopProducts] = useState([])
-  [0;32m  const [topServices, setTopServices] = useState([])
+  const [topServices, setTopServices] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(null)
   const reportRef = useRef(null)
 
@@ -176,74 +176,55 @@ const Reports = () => {
   }
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
   }
 
   return (
     <div ref={reportRef} style={{ padding: '16px' }}>
-      {/* Cabeçalho */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
           <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
         </div>
-        <button onClick={generatePDF} style={{ padding: '10px 20px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>📄 Exportar PDF</button>
+        <button onClick={generatePDF} style={{ padding: '10px 20px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Exportar PDF</button>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {periods.map(p => (
           <button key={p.value} onClick={() => setPeriod(p.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: period === p.value ? 'none' : '1px solid #3A5F40', backgroundColor: period === p.value ? '#3A5F40' : 'transparent', color: period === p.value ? 'white' : '#E0E0E0', cursor: 'pointer' }}>{p.label}</button>
         ))}
       </div>
 
-      {/* Cards Financeiros */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>💰 Faturamento</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Faturamento</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.grossRevenue)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>✅ Recebido</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Recebido</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.received)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⏳ A Receber</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>A Receber</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.pending)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>📉 Despesas Pagas</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Despesas Pagas</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.expensesPaid)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⚠️ A Pagar</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>A Pagar</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.expensesPending)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>⚖️ Lucro Líquido</p>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Lucro Liquido</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netProfit >= 0 ? '#2E7D32' : '#C62828' }}>{formatCurrency(stats.netProfit)}</p>
         </div>
       </div>
 
-      {/* Métodos de Pagamento */}
-      {paymentMethods.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>💳 Métodos de Pagamento</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            {paymentMethods.map(m => (
-              <div key={m.method} style={{ flex: 1, minWidth: '80px', textAlign: 'center', padding: '8px', backgroundColor: '#2C2C2C', borderRadius: '8px' }}>
-                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>{m.count}</p>
-                <p style={{ fontSize: '11px', color: '#9CA3AF' }}>{m.method}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Lista de Vendas com botão excluir */}
       {sales.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📋 Lista de Vendas</h3>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>Lista de Vendas</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <thead>
@@ -277,7 +258,6 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Modal de exclusão */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
