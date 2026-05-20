@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.svg', 'icon-512.svg'],
+      includeAssets: ['logo.jpeg', 'favicon.ico'],
       manifest: {
         name: 'Smoke Garden - Mecânica 2 Tempos',
         short_name: 'Smoke Garden',
@@ -18,21 +18,15 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: '/icon-192.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/icon-512.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
+            src: '/logo.jpeg',
+            sizes: 'any',
+            type: 'image/jpeg',
             purpose: 'any maskable'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,ico,png,jpg,jpeg}'],
+        globPatterns: ['**/*.{js,css,html,svg,ico,jpeg,jpg,png}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
