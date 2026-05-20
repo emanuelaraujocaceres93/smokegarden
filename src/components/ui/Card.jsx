@@ -1,14 +1,15 @@
-import React from 'react'
+﻿import React from 'react'
 
-export default function Card({ title, children, className = '' }) {
+const Card = ({ children, title, className = '', onClick }) => {
   return (
-    <div className={`card ${className}`.trim()}>
-      {title && (
-        <div className="card-header">
-          <h2 className="card-title">{title}</h2>
-        </div>
-      )}
+    <div 
+      className={g-carbon rounded-xl border border-border p-5 shadow-soft transition-all duration-200 hover:shadow-md }
+      onClick={onClick}
+    >
+      {title && <h3 className="text-lg font-semibold text-burnt mb-3">{title}</h3>}
       {children}
     </div>
   )
 }
+
+export default Card

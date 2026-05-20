@@ -1,209 +1,107 @@
-﻿import React, { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
+﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import toast from 'react-hot-toast'
 import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Input from '../../components/ui/Input'
-import Modal from '../../components/ui/Modal'
-import Loading from '../../components/ui/Loading'
-
-const initialForm = {
-  name: '',
-  description: '',
-  price: '',
-  hours_estimated: '',
-  photo_url: ''
-}
+import PageHeader from '../../components/ui/PageHeader'
 
 const Services = () => {
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingService, setEditingService] = useState(null)
-  const [form, setForm] = useState(initialForm)
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState({ name: '', description: '', price: '', estimated_hours: '' })
 
-  useEffect(() => {
-    fetchServices()
-  }, [])
+  useEffect(() => { fetchServices() }, [])
 
   const fetchServices = async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('services').select('*').order('name', { ascending: true })
-    if (error) {
-      toast.error('Erro ao carregar serviços: ' + error.message)
-      setServices([])
-    } else {
-      setServices(data || [])
-    }
+    const { data } = await supabase.from('services').select('*').order('name')
+    setServices(data || [])
     setLoading(false)
   }
 
-  const openModal = (service = null) => {
-    if (service) {
-      setEditingService(service)
-      setForm({
-        name: service.name || '',
-        description: service.description || '',
-        price: service.price ?? '',
-        hours_estimated: service.hours_estimated ?? '',
-        photo_url: service.photo_url || ''
-      })
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const payload = { name: form.name, description: form.description, price: parseFloat(form.price) || 0, estimated_hours: parseInt(form.estimated_hours) || null }
+    
+    if (editing) {
+      await supabase.from('services').update(payload).eq('id', editing.id)
+      toast.success('Serviço atualizado!')
     } else {
-      setEditingService(null)
-      setForm(initialForm)
+      await supabase.from('services').insert([payload])
+      toast.success('Serviço cadastrado!')
     }
-    setModalOpen(true)
+    setShowModal(false)
+    setEditing(null)
+    setForm({ name: '', description: '', price: '', estimated_hours: '' })
+    fetchServices()
   }
 
-  const saveService = async (event) => {
-    event.preventDefault()
-    if (!form.name.trim() || !form.price) {
-      toast.error('Nome e preço são obrigatórios.')
-      return
+  const handleDelete = async (id) => {
+    if (confirm('Excluir este serviço?')) {
+      await supabase.from('services').delete().eq('id', id)
+      toast.success('Serviço excluído!')
+      fetchServices()
     }
-
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      price: Number(form.price) || 0,
-      hours_estimated: form.hours_estimated ? Number(form.hours_estimated) : null,
-      photo_url: form.photo_url.trim() || null
-    }
-
-    const request = editingService
-      ? supabase.from('services').update(payload).eq('id', editingService.id)
-      : supabase.from('services').insert([payload])
-
-    const { error } = await request
-    if (error) {
-      toast.error('Erro ao salvar serviço: ' + error.message)
-      return
-    }
-
-    toast.success('Serviço salvo com sucesso')
-    setModalOpen(false)
-    setEditingService(null)
-    setForm(initialForm)
-    await fetchServices()
   }
 
-  const deleteService = async (service) => {
-    if (!window.confirm(`Excluir ${service.name}?`)) {
-      return
-    }
-
-    const { error } = await supabase.from('services').delete().eq('id', service.id)
-    if (error) {
-      toast.error('Erro ao excluir serviço: ' + error.message)
-      return
-    }
-
-    toast.success('Serviço excluído')
-    await fetchServices()
-  }
-
-  if (loading) {
-    return <Loading message="Carregando serviços..." />
-  }
+  if (loading) return <div className="flex justify-center items-center h-64 text-grayLight">Carregando...</div>
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Serviços</h1>
-          <p className="page-description">Cadastre serviços com preço, horas estimadas e imagem representativa.</p>
-        </div>
-        <Button variant="secondary" size="md" onClick={() => openModal()}>
-          + Novo Serviço
-        </Button>
+    <div className="p-4 md:p-6">
+      <PageHeader 
+        title="Serviços" 
+        description="Gerencie os serviços oferecidos"
+        actions={
+          <button onClick={() => { setEditing(null); setForm({ name: '', description: '', price: '', estimated_hours: '' }); setShowModal(true) }}
+            className="bg-garden text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">
+            + Novo Serviço
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {services.map(s => (
+          <Card key={s.id}>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-bold text-white">{s.name}</h3>
+                {s.description && <p className="text-grayLight text-sm mt-1">{s.description}</p>}
+                <p className="text-burnt font-bold mt-2">R$ {s.price?.toFixed(2) || '0.00'}</p>
+                {s.estimated_hours && <p className="text-grayLight text-xs mt-1">{s.estimated_hours}h estimados</p>}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setEditing(s); setForm({ name: s.name, description: s.description || '', price: s.price, estimated_hours: s.estimated_hours || '' }); setShowModal(true) }} 
+                  className="text-garden hover:text-green-400">Editar</button>
+                <button onClick={() => handleDelete(s.id)} className="text-alertRed hover:text-red-400">Excluir</button>
+              </div>
+            </div>
+          </Card>
+        ))}
+        {services.length === 0 && <div className="col-span-full text-center text-grayLight py-8">Nenhum serviço cadastrado.</div>}
       </div>
 
-      {services.length === 0 ? (
-        <Card>
-          <p style={{ color: 'rgba(224,224,224,.72)' }}>Nenhum serviço cadastrado. Crie um serviço para começar.</p>
-        </Card>
-      ) : (
-        <div className="panel-row panel-row-2" style={{ gap: 20 }}>
-          {services.map((service) => (
-            <Card key={service.id}>
-              <div className="flex-space">
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem' }}>{service.name}</h3>
-                  <p style={{ margin: '10px 0 0', color: 'rgba(224,224,224,.72)' }}>{service.description || 'Sem descrição'}</p>
-                </div>
-                <span style={{ background: 'rgba(217,90,26,.16)', color: '#D95A1A', borderRadius: 999, padding: '8px 14px', fontWeight: 700 }}>
-                  R$ {Number(service.price || 0).toFixed(2)}
-                </span>
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-carbon rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+            <h2 className="text-xl font-bold text-burnt mb-4">{editing ? 'Editar Serviço' : 'Novo Serviço'}</h2>
+            <form onSubmit={handleSubmit}>
+              <input type="text" placeholder="Nome *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} 
+                className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" required />
+              <textarea placeholder="Descrição" value={form.description} onChange={e => setForm({...form, description: e.target.value})} 
+                className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" rows="2" />
+              <input type="number" step="0.01" placeholder="Preço *" value={form.price} onChange={e => setForm({...form, price: e.target.value})} 
+                className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" required />
+              <input type="number" placeholder="Horas estimadas" value={form.estimated_hours} onChange={e => setForm({...form, estimated_hours: e.target.value})} 
+                className="w-full p-2 rounded bg-smoke border border-gray-700 mb-4" />
+              <div className="flex gap-3">
+                <button type="submit" className="flex-1 bg-garden text-white py-2 rounded-lg">{editing ? 'Atualizar' : 'Cadastrar'}</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-gray-700 text-white py-2 rounded-lg">Cancelar</button>
               </div>
-              <div className="flex-row" style={{ marginTop: 18, justifyContent: 'space-between' }}>
-                <div style={{ color: 'rgba(224,224,224,.72)' }}>
-                  Horas estimadas: <strong>{service.hours_estimated ?? '—'}h</strong>
-                </div>
-                <div className="flex-row" style={{ gap: 12 }}>
-                  <Button variant="secondary" size="sm" onClick={() => openModal(service)}>
-                    Editar
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => deleteService(service)}>
-                    Excluir
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+            </form>
+          </div>
         </div>
       )}
-
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingService ? 'Editar Serviço' : 'Novo Serviço'}>
-        <form onSubmit={saveService}>
-          <Input
-            id="service-name"
-            label="Nome"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            required
-          />
-          <Input
-            id="service-description"
-            label="Descrição"
-            textarea
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-          />
-          <div className="panel-row panel-row-2">
-            <Input
-              id="service-price"
-              label="Preço"
-              type="number"
-              step="0.01"
-              value={form.price}
-              onChange={(event) => setForm({ ...form, price: event.target.value })}
-              required
-            />
-            <Input
-              id="service-hours"
-              label="Horas estimadas"
-              type="number"
-              value={form.hours_estimated}
-              onChange={(event) => setForm({ ...form, hours_estimated: event.target.value })}
-            />
-          </div>
-          <Input
-            id="service-photo"
-            label="URL da imagem"
-            type="url"
-            value={form.photo_url}
-            onChange={(event) => setForm({ ...form, photo_url: event.target.value })}
-          />
-          <div className="flex-row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
-            <Button variant="secondary" size="md" type="button" onClick={() => setModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="primary" size="md" type="submit">
-              {editingService ? 'Atualizar' : 'Cadastrar'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   )
 }

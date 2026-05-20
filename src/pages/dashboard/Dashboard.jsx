@@ -1,266 +1,145 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from 'recharts'
+﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { format, isBefore, parseISO, subMonths } from 'date-fns'
-import { useAuth } from '../../contexts/AuthContext'
+import { format, subMonths, isAfter, isBefore } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import Card from '../../components/ui/Card'
-import Table from '../../components/ui/Table'
-import Loading from '../../components/ui/Loading'
-import toast from 'react-hot-toast'
+import PageHeader from '../../components/ui/PageHeader'
 
 const Dashboard = () => {
-  const { user } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [products, setProducts] = useState([])
-  const [sales, setSales] = useState([])
-  const [installments, setInstallments] = useState([])
-  const [saleItems, setSaleItems] = useState([])
+  const [stats, setStats] = useState({
+    totalSalesMonth: 0,
+    totalProducts: 0,
+    lowStockProducts: 0,
+    pendingPayments: 0,
+    productsExpiring: 0
+  })
+  const [lowStockList, setLowStockList] = useState([])
+  const [recentSales, setRecentSales] = useState([])
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      const firstDay = new Date()
-      firstDay.setDate(1)
-      firstDay.setHours(0, 0, 0, 0)
-
-      const [productsResult, salesResult, installmentsResult, saleItemsResult] = await Promise.all([
-        supabase.from('products').select('*').order('name', { ascending: true }),
-        supabase.from('sales').select('*').gte('created_at', firstDay.toISOString()),
-        supabase.from('installments').select('*').neq('status', 'paid'),
-        supabase.from('sale_items').select('*')
-      ])
-
-      if (productsResult.error) {
-        toast.error('Erro ao buscar produtos: ' + productsResult.error.message)
-        setProducts([])
-      } else {
-        setProducts(productsResult.data || [])
-      }
-
-      if (salesResult.error) {
-        toast.error('Erro ao buscar vendas: ' + salesResult.error.message)
-        setSales([])
-      } else {
-        setSales(salesResult.data || [])
-      }
-
-      if (installmentsResult.error) {
-        toast.error('Erro ao buscar parcelas: ' + installmentsResult.error.message)
-        setInstallments([])
-      } else {
-        setInstallments(installmentsResult.data || [])
-      }
-
-      if (saleItemsResult.error) {
-        toast.error('Erro ao buscar itens de venda: ' + saleItemsResult.error.message)
-        setSaleItems([])
-      } else {
-        setSaleItems(saleItemsResult.data || [])
-      }
-
-      setLoading(false)
-    }
-
-    loadData()
+    fetchDashboardData()
   }, [])
 
-  const lowStockProducts = useMemo(
-    () => products.filter((product) => Number(product.quantity || 0) <= Number(product.min_stock || 5)),
-    [products]
-  )
-
-  const staleProducts = useMemo(() => {
-    const threshold = subMonths(new Date(), 6)
-    return products.filter((product) => {
-      if (!product.last_sold_at) return true
-      return isBefore(parseISO(product.last_sold_at), threshold)
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    
+    const { data: products } = await supabase.from('products').select('*')
+    const firstDayOfMonth = new Date()
+    firstDayOfMonth.setDate(1)
+    firstDayOfMonth.setHours(0, 0, 0, 0)
+    
+    const { data: sales } = await supabase
+      .from('sales')
+      .select('*')
+      .gte('created_at', firstDayOfMonth.toISOString())
+    
+    const { data: installments } = await supabase
+      .from('installments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('due_date', new Date().toISOString())
+    
+    const lowStock = products?.filter(p => p.quantity <= (p.min_stock || 5)) || []
+    
+    const thirtyDaysFromNow = new Date()
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+    
+    const expiring = products?.filter(p => {
+      if (!p.has_expiry || !p.expiry_date) return false
+      const expiryDate = new Date(p.expiry_date)
+      return isAfter(expiryDate, new Date()) && isBefore(expiryDate, thirtyDaysFromNow)
+    }) || []
+    
+    const recent = sales?.sort((a, b) => 
+      new Date(b.created_at) - new Date(a.created_at)
+    ).slice(0, 5) || []
+    
+    setStats({
+      totalSalesMonth: sales?.reduce((sum, s) => sum + s.total_amount, 0) || 0,
+      totalProducts: products?.length || 0,
+      lowStockProducts: lowStock.length,
+      pendingPayments: installments?.length || 0,
+      productsExpiring: expiring.length
     })
-  }, [products])
-
-  const topProducts = useMemo(() => {
-    const counts = {}
-    saleItems.forEach((item) => {
-      if (!item.item_name) return
-      counts[item.item_name] = (counts[item.item_name] || 0) + Number(item.quantity || 0)
-    })
-    return Object.entries(counts)
-      .map(([name, quantity]) => ({ name, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 8)
-  }, [saleItems])
-
-  if (loading) {
-    return <Loading message="Carregando dashboard..." />
+    
+    setLowStockList(lowStock.slice(0, 10))
+    setRecentSales(recent)
+    setLoading(false)
   }
 
-  const totalSalesMonth = sales.reduce((sum, item) => sum + Number(item.total_amount || 0), 0)
-  const totalProducts = products.length
-  const pendingPayments = installments.length
-  const expiringProducts = products.filter((product) => {
-    if (!product.expiry_date) return false
+  if (loading) {
+    return <div className="flex justify-center items-center h-64 text-grayLight">Carregando dashboard...</div>
+  }
 
-    const expiry = parseISO(product.expiry_date)
-    const now = new Date()
-    const threshold = new Date()
-    threshold.setDate(now.getDate() + 30)
-
-    return expiry > now && expiry <= threshold
-  }).length
-
-  const stockDistribution = [
-    { name: 'Estoque Baixo', value: lowStockProducts.length },
-    { name: 'Estoque Normal', value: totalProducts - lowStockProducts.length },
-    { name: 'A vencer', value: expiringProducts }
-  ]
+  const StatCard = ({ label, value, color }) => (
+    <Card className="text-center">
+      <p className="text-grayLight text-sm mb-1">{label}</p>
+      <p className={	ext-2xl md:text-3xl font-bold }>{value}</p>
+    </Card>
+  )
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-description">Olá, {user?.email || 'Operador'}. Confira os principais indicadores do mês.</p>
-        </div>
+    <div className="p-4 md:p-6">
+      <PageHeader title="Dashboard" description="Visão geral do negócio" />
+      
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard label="Vendas do Mês" value={R$ } color="text-garden" />
+        <StatCard label="Total Produtos" value={stats.totalProducts} color="text-burnt" />
+        <StatCard label="Estoque Baixo" value={stats.lowStockProducts} color="text-alertYellow" />
+        <StatCard label="Pendentes" value={stats.pendingPayments} color="text-alertRed" />
+        <StatCard label="A Vencer" value={stats.productsExpiring} color="text-alertYellow" />
       </div>
 
-      <div className="panel-row panel-row-3">
-        <Card>
-          <div className="card-actions" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ color: 'rgba(224,224,224,0.72)', marginBottom: 10 }}>Vendas do mês</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--garden)' }}>
-                R$ {totalSalesMonth.toFixed(2)}
-              </div>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="card-actions" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ color: 'rgba(224,224,224,0.72)', marginBottom: 10 }}>Total de produtos</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--burnt)' }}>{totalProducts}</div>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="card-actions" style={{ justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ color: 'rgba(224,224,224,0.72)', marginBottom: 10 }}>Estoque baixo</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--alertYellow)' }}>{lowStockProducts.length}</div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="panel-row panel-row-3" style={{ marginTop: 20 }}>
-        <Card>
-          <div>
-            <div style={{ color: 'rgba(224,224,224,0.72)', marginBottom: 8 }}>Pendentes</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--alertRed)' }}>{pendingPayments}</div>
-          </div>
-        </Card>
-        <Card>
-          <div>
-            <div style={{ color: 'rgba(224,224,224,0.72)', marginBottom: 8 }}>A vencer</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--alertYellow)' }}>{expiringProducts}</div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="panel-row panel-row-2" style={{ marginTop: 24 }}>
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Produtos mais vendidos</h2>
-          </div>
-          {topProducts.length === 0 ? (
-            <div style={{ color: 'rgba(224,224,224,0.7)' }}>Nenhum item vendido ainda.</div>
-          ) : (
-            <div style={{ width: '100%', minHeight: 300 }}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topProducts} margin={{ right: 16 }}>
-                  <CartesianGrid stroke="#333" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" stroke="#E0E0E0" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#E0E0E0" />
-                  <Tooltip contentStyle={{ background: '#1A1A1A', border: 'none', color: '#E0E0E0' }} />
-                  <Bar dataKey="quantity" fill="var(--burnt)" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Visão de estoque</h2>
-          </div>
-          <Table headers={['Produto', 'Quantidade', 'Mínimo']}>
-            {lowStockProducts.length === 0 ? (
-              <tr>
-                <td colSpan="3" style={{ padding: 16, color: 'rgba(224,224,224,0.72)' }}>
-                  Nenhum produto com estoque baixo.
-                </td>
-              </tr>
-            ) : (
-              lowStockProducts.map((product) => (
-                <tr key={product.id}>
-                  <td>{product.name}</td>
-                  <td>{product.quantity}</td>
-                  <td>{product.min_stock || 5}</td>
+      {lowStockList.length > 0 && (
+        <Card title="⚠️ Produtos com Estoque Baixo" className="mb-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border">
+                <tr className="text-left text-grayLight">
+                  <th className="py-2">Produto</th>
+                  <th className="py-2">Estoque</th>
+                  <th className="py-2">Mínimo</th>
                 </tr>
-              ))
-            )}
-          </Table>
-        </Card>
-      </div>
-
-      <div className="panel-row panel-row-2" style={{ marginTop: 24 }}>
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Produtos parados</h2>
+              </thead>
+              <tbody>
+                {lowStockList.map(p => (
+                  <tr key={p.id} className="border-b border-border/50">
+                    <td className="py-2">{p.name}</td>
+                    <td className="py-2 text-alertYellow">{p.quantity}</td>
+                    <td className="py-2">{p.min_stock || 5}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <Table headers={['Produto', 'Última venda', 'Estoque']}>
-            {staleProducts.length === 0 ? (
-              <tr>
-                <td colSpan="3" style={{ padding: 16, color: 'rgba(224,224,224,0.72)' }}>
-                  Nenhum produto sem venda nos últimos 6 meses.
-                </td>
-              </tr>
-            ) : (
-              staleProducts.map((product) => (
-                <tr key={product.id}>
-                  <td>{product.name}</td>
-                  <td>{product.last_sold_at ? format(parseISO(product.last_sold_at), 'dd/MM/yyyy') : 'Nunca'}</td>
-                  <td>{product.quantity}</td>
+        </Card>
+      )}
+
+      {recentSales.length > 0 && (
+        <Card title="Últimas Vendas">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border">
+                <tr className="text-left text-grayLight">
+                  <th className="py-2">Data</th>
+                  <th className="py-2">Cliente</th>
+                  <th className="py-2">Total</th>
                 </tr>
-              ))
-            )}
-          </Table>
-        </Card>
-
-        <Card>
-          <div className="card-header">
-            <h2 className="card-title">Distribuição de estoque</h2>
-          </div>
-          <div style={{ width: '100%', minHeight: 300 }}>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stockDistribution} margin={{ right: 16 }}>
-                <CartesianGrid stroke="#333" strokeDasharray="3 3" />
-                <XAxis dataKey="name" stroke="#E0E0E0" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#E0E0E0" />
-                <Tooltip contentStyle={{ background: '#1A1A1A', border: 'none', color: '#E0E0E0' }} />
-                <Bar dataKey="value" fill="var(--garden)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+              </thead>
+              <tbody>
+                {recentSales.map(s => (
+                  <tr key={s.id} className="border-b border-border/50">
+                    <td className="py-2">{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
+                    <td className="py-2">{s.customer_name || '—'}</td>
+                    <td className="py-2">R$ {s.total_amount.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
-      </div>
+      )}
     </div>
   )
 }

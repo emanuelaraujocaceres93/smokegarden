@@ -728,3 +728,40 @@ body {
     font-size: 20px;
   }
 }
+/* CLASSES UTILITÁRIAS RESPONSIVAS */
+.container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 1rem; }
+@media (min-width: 768px) { .container { padding: 0 1.5rem; } }
+@media (min-width: 1024px) { .container { padding: 0 2rem; } }
+
+/* Overflow seguro para mobile */
+.overflow-safe { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Cards padronizados */
+.card { background: var(--carbon); border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 1.25rem; transition: all 0.2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+
+/* Grid responsivo */
+.grid-responsive { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .grid-responsive { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .grid-responsive { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1280px) { .grid-responsive { grid-template-columns: repeat(4, 1fr); } }
+
+/* Tabelas responsivas */
+.table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -1rem; padding: 0 1rem; }
+@media (min-width: 768px) { .table-wrapper { margin: 0; padding: 0; } }
+
+/* Cores de texto */
+.text-burnt { color: var(--burnt); }
+.text-garden { color: var(--garden); }
+.text-alertRed { color: var(--alertRed); }
+.text-alertYellow { color: var(--alertYellow); }
+.text-success { color: var(--success); }
+.text-grayLight { color: var(--grayLight); }
+
+/* Backgrounds */
+.bg-burnt { background: var(--burnt); }
+.bg-garden { background: var(--garden); }
+.bg-carbon { background: var(--carbon); }
+.bg-smoke { background: var(--smoke); }
