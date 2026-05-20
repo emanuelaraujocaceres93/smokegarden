@@ -1,10 +1,10 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
-import { format, subDays, subMonths, startOfDay, endOfDay } from 'date-fns'
+import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import toast from 'react-hot-toast'
 import html2pdf from 'html2pdf.js'
 
-const Reports = () => {$generatePDF
+const Reports = () => {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('month')
   const [sales, setSales] = useState([])
@@ -20,6 +20,7 @@ const Reports = () => {$generatePDF
   const [paymentMethods, setPaymentMethods] = useState({})
   const [topProducts, setTopProducts] = useState([])
   const [topServices, setTopServices] = useState([])
+  const reportRef = useRef(null)
 
   const periods = [
     { value: 'day', label: 'Hoje', days: 1 },
@@ -48,7 +49,6 @@ const Reports = () => {$generatePDF
     setLoading(true)
     const { start, end } = getDateRange()
     
-    // Buscar vendas do período
     const { data: allSales } = await supabase
       .from('sales')
       .select('*')
@@ -56,7 +56,6 @@ const Reports = () => {$generatePDF
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
     
-    // Buscar contas pagas no período
     const { data: paidBills } = await supabase
       .from('bills_to_pay')
       .select('*')
@@ -64,25 +63,19 @@ const Reports = () => {$generatePDF
       .gte('paid_date', start.toISOString().split('T')[0])
       .lte('paid_date', end.toISOString().split('T')[0])
     
-    // Buscar itens de venda
-    const { data: saleItems } = await supabase
-      .from('sale_items')
-      .select('*')
+    const { data: saleItems } = await supabase.from('sale_items').select('*')
     
-    // Calcular estatísticas
     const totalAmount = (allSales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
     const paidAmount = (allSales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
     const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
     const netProfit = paidAmount - expensesPaid
     
-    // Métodos de pagamento
     const methods = {}
     ;(allSales || []).forEach(sale => {
       const method = sale.payment_method || 'outro'
       methods[method] = (methods[method] || 0) + 1
     })
     
-    // Produtos mais vendidos
     const productCount = {}
     const serviceCount = {}
     
@@ -138,16 +131,51 @@ const Reports = () => {$generatePDF
     return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   }
 
+  const generatePDF = () => {
+    const element = reportRef.current
+    if (!element) {
+      toast.error('Erro ao gerar PDF')
+      return
+    }
+    const opt = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `relatorio_${period}_${format(new Date(), 'yyyy-MM-dd')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    }
+    html2pdf().set(opt).from(element).save()
+  }
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
   }
 
-  return (<div ref={reportRef}>
-    <div style={{ padding: '16px' }}>
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}><div><h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1></div><button onClick={generatePDF} style={{ padding: "10px 20px", backgroundColor: "#D95A1A", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", display: "flex", alignItems: "center", gap: "8px" }}>📄 Exportar PDF</button></div>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
+  return (
+    <div ref={reportRef} style={{ padding: '16px' }}>
+      {/* Cabeçalho com botão PDF */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
+          <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Análise completa do negócio</p>
+        </div>
+        <button
+          onClick={generatePDF}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#D95A1A',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          📄 Exportar PDF
+        </button>
       </div>
 
       {/* Filtros */}
@@ -197,7 +225,7 @@ const Reports = () => {$generatePDF
         </div>
       </div>
 
-      {/* Cards de resumo de vendas */}
+      {/* Resumo de vendas */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -233,7 +261,7 @@ const Reports = () => {$generatePDF
         </div>
       )}
 
-      {/* Produtos e Serviços Mais Vendidos */}
+      {/* Produtos e Serviços */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {topProducts.length > 0 && (
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
@@ -304,4 +332,3 @@ const Reports = () => {$generatePDF
 }
 
 export default Reports
-
