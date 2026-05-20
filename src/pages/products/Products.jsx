@@ -146,6 +146,7 @@ const Products = () => {
 
   return (
     <div className="p-4 md:p-6">
+      {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-burnt">Produtos</h1>
         <button
@@ -160,19 +161,20 @@ const Products = () => {
         </button>
       </div>
 
-      <div className="bg-carbon rounded-lg overflow-hidden">
+      {/* Tabela de Produtos */}
+      <div className="bg-carbon rounded-lg overflow-hidden border border-gray-700">
         <div className="overflow-x-auto">
           <div className="min-w-[800px] md:min-w-full">
-            <table className="w-full text-sm">
-              <thead className="bg-smoke text-grayLight border-b border-gray-700">
-                <tr>
-                  <th className="py-3 px-4 text-left">Produto</th>
-                  <th className="py-3 px-4 text-left">Preço Compra</th>
-                  <th className="py-3 px-4 text-left">Preço Venda</th>
-                  <th className="py-3 px-4 text-left">Estoque</th>
-                  <th className="py-3 px-4 text-left">Estoque Mínimo</th>
-                  <th className="py-3 px-4 text-left">Validade</th>
-                  <th className="py-3 px-4 text-left">Ações</th>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-smoke border-b-2 border-gray-600">
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Produto</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Compra</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Preço Venda</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque Mínimo</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Validade</th>
+                  <th className="py-3 px-4 text-left text-grayLight font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,40 +185,68 @@ const Products = () => {
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => (
-                    <tr key={product.id} className="border-b border-gray-800 hover:bg-smoke/50">
-                      <td className="py-3 px-4">
-                        <div className="font-medium">{product.name}</div>
+                  products.map((product, index) => (
+                    <tr 
+                      key={product.id} 
+                      className={`border-b border-gray-700 hover:bg-smoke/30 transition-colors ${
+                        index % 2 === 0 ? 'bg-carbon' : 'bg-smoke/10'
+                      }`}
+                    >
+                      <td className="py-3 px-4 border-r border-gray-700">
+                        <div className="font-medium text-white">{product.name}</div>
                         {product.description && (
-                          <div className="text-xs text-grayLight">{product.description}</div>
+                          <div className="text-xs text-gray-400 mt-1">{product.description}</div>
                         )}
                       </td>
-                      <td className="py-3 px-4">R$ {product.purchase_price.toFixed(2)}</td>
-                      <td className="py-3 px-4">R$ {product.sale_price.toFixed(2)}</td>
-                      <td className="py-3 px-4">
-                        <span className={product.quantity <= (product.min_stock || 5) ? 'text-alertYellow' : 'text-green-400'}>
-                          {product.quantity}
-                        </span>
+                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                        R$ {product.purchase_price?.toFixed(2) || '0.00'}
                       </td>
-                      <td className="py-3 px-4">{product.min_stock || 5}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                        R$ {product.sale_price?.toFixed(2) || '0.00'}
+                      </td>
+                      <td className="py-3 px-4 border-r border-gray-700">
+                        <span className={`font-semibold ${
+                          product.quantity <= (product.min_stock || 5) 
+                            ? 'text-yellow-400' 
+                            : 'text-green-400'
+                        }`}>
+                          {product.quantity || 0}
+                        </span>
+                        {product.quantity <= (product.min_stock || 5) && (
+                          <span className="ml-2 text-xs text-yellow-500">(baixo)</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-grayLight border-r border-gray-700">
+                        {product.min_stock || 5}
+                      </td>
+                      <td className="py-3 px-4 border-r border-gray-700">
                         {product.has_expiry && product.expiry_date ? (
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            isExpired(product.expiry_date) ? 'bg-red-900 text-red-300' :
-                            isExpiringSoon(product.expiry_date) ? 'bg-yellow-900 text-yellow-300' :
-                            'bg-green-900 text-green-300'
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            isExpired(product.expiry_date) 
+                              ? 'bg-red-900 text-red-300' 
+                              : isExpiringSoon(product.expiry_date) 
+                                ? 'bg-yellow-900 text-yellow-300' 
+                                : 'bg-green-900 text-green-300'
                           }`}>
                             {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
+                            {isExpired(product.expiry_date) && ' (Vencido)'}
+                            {isExpiringSoon(product.expiry_date) && !isExpired(product.expiry_date) && ' (Vence em breve)'}
                           </span>
                         ) : (
-                          <span className="text-grayLight text-xs">—</span>
+                          <span className="text-gray-500 text-xs">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <button onClick={() => handleEdit(product)} className="text-garden hover:text-green-400 mr-3 transition">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-garden hover:text-green-400 mr-3 transition font-medium"
+                        >
                           Editar
                         </button>
-                        <button onClick={() => handleDelete(product.id)} className="text-alertRed hover:text-red-400 transition">
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="text-red-500 hover:text-red-400 transition font-medium"
+                        >
                           Excluir
                         </button>
                       </td>
@@ -229,10 +259,10 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Modal completo */}
+      {/* Modal de Cadastro/Edição */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-carbon rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-carbon rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-700">
             <div className="p-6">
               <h2 className="text-xl font-bold text-burnt mb-4">
                 {editingProduct ? 'Editar Produto' : 'Novo Produto'}
@@ -244,7 +274,7 @@ const Products = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     required
                   />
                 </div>
@@ -254,7 +284,7 @@ const Products = () => {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     rows="2"
                   />
                 </div>
@@ -267,7 +297,7 @@ const Products = () => {
                       step="0.01"
                       value={formData.purchase_price}
                       onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
-                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     />
                   </div>
                   <div>
@@ -277,7 +307,7 @@ const Products = () => {
                       step="0.01"
                       value={formData.sale_price}
                       onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                       required
                     />
                   </div>
@@ -290,7 +320,7 @@ const Products = () => {
                       type="number"
                       value={formData.quantity}
                       onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     />
                   </div>
                   <div>
@@ -299,7 +329,7 @@ const Products = () => {
                       type="number"
                       value={formData.min_stock}
                       onChange={(e) => setFormData({ ...formData, min_stock: e.target.value })}
-                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     />
                   </div>
                 </div>
@@ -323,7 +353,7 @@ const Products = () => {
                       type="date"
                       value={formData.expiry_date}
                       onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                      className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                     />
                   </div>
                 )}
@@ -335,21 +365,21 @@ const Products = () => {
                     value={formData.photo_url}
                     onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
                     placeholder="https://exemplo.com/foto.jpg"
-                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden outline-none"
+                    className="w-full p-2 rounded bg-smoke text-white border border-gray-700 focus:border-garden focus:outline-none transition"
                   />
                 </div>
                 
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-garden text-white py-2 rounded-lg hover:bg-green-700 transition"
+                    className="flex-1 bg-garden text-white py-2 rounded-lg hover:bg-green-700 transition font-medium"
                   >
                     {editingProduct ? 'Atualizar' : 'Cadastrar'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition"
+                    className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition font-medium"
                   >
                     Cancelar
                   </button>
