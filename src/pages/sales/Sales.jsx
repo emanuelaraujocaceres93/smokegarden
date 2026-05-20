@@ -1,318 +1,462 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
-import toast from 'react-hot-toast'
+﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useCart } from '../../hooks/useCart'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import Input from '../../components/ui/Input'
-import Loading from '../../components/ui/Loading'
-
-const paymentMethods = [
-  { value: 'cash', label: 'Dinheiro' },
-  { value: 'pix', label: 'Pix' },
-  { value: 'debit', label: 'Cartão Débito' },
-  { value: 'credit', label: 'Cartão Crédito' },
-  { value: 'installment', label: 'Parcelado' }
-]
+import toast from 'react-hot-toast'
 
 const Sales = () => {
-  const { cartItems, addItem, removeItem, updateQuantity, clearCart, totalAmount } = useCart()
   const [products, setProducts] = useState([])
+  const [services, setServices] = useState([])
+  const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [search, setSearch] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [notes, setNotes] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
-  const [installmentsCount, setInstallmentsCount] = useState(2)
-  const [saleFinished, setSaleFinished] = useState(false)
+  const [installments, setInstallments] = useState(1)
+  const [notes, setNotes] = useState('')
+  const [activeTab, setActiveTab] = useState('products')
 
   useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true)
-      const { data, error } = await supabase.from('products').select('*').order('name', { ascending: true })
-      if (error) {
-        toast.error('Erro ao carregar produtos: ' + error.message)
-        setProducts([])
-      } else {
-        setProducts(data || [])
-      }
-      setLoading(false)
-    }
-
-    loadProducts()
+    fetchData()
   }, [])
 
-  const availableProducts = useMemo(() => {
-    const filtered = products.filter((product) => Number(product.quantity || 0) > 0)
-    if (!search.trim()) return filtered
-    return filtered.filter((product) =>
-      product.name.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [products, search])
-
-  const installmentValue = useMemo(() => {
-    if (paymentMethod !== 'installment') return 0
-    return Number((totalAmount / installmentsCount).toFixed(2))
-  }, [paymentMethod, installmentsCount, totalAmount])
-
-  const handleAddProduct = (product) => {
-    if (Number(product.quantity || 0) <= 0) {
-      toast.error('Produto sem estoque disponível')
-      return
-    }
-    addItem(product, 'product')
-    toast.success(`${product.name} adicionado ao carrinho`)
+  const fetchData = async () => {
+    setLoading(true)
+    const { data: productsData } = await supabase.from('products').select('*').order('name')
+    const { data: servicesData } = await supabase.from('services').select('*').order('name')
+    setProducts(productsData || [])
+    setServices(servicesData || [])
+    setLoading(false)
   }
 
-  const handleFinalize = async () => {
-    if (!cartItems.length) {
-      toast.error('Adicione itens ao carrinho antes de finalizar')
+  const addToCart = (item, type) => {
+    const existingItem = cart.find(i => i.id === item.id && i.type === type)
+    
+    if (existingItem) {
+      setCart(cart.map(i => 
+        i.id === item.id && i.type === type 
+          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.price }
+          : i
+      ))
+    } else {
+      setCart([...cart, {
+        id: item.id,
+        type: type,
+        name: item.name,
+        price: type === 'product' ? item.sale_price : item.price,
+        quantity: 1,
+        subtotal: type === 'product' ? item.sale_price : item.price
+      }])
+    }
+    toast.success(`${item.name} adicionado ao carrinho!`)
+  }
+
+  const removeFromCart = (id, type) => {
+    setCart(cart.filter(i => !(i.id === id && i.type === type)))
+    toast.success('Item removido do carrinho')
+  }
+
+  const updateQuantity = (id, type, newQuantity) => {
+    if (newQuantity < 1) {
+      removeFromCart(id, type)
+      return
+    }
+    
+    setCart(cart.map(i => 
+      i.id === id && i.type === type 
+        ? { ...i, quantity: newQuantity, subtotal: newQuantity * i.price }
+        : i
+    ))
+  }
+
+  const getTotal = () => {
+    return cart.reduce((sum, item) => sum + item.subtotal, 0)
+  }
+
+  const getInstallmentValue = () => {
+    const total = getTotal()
+    return installments > 1 ? total / installments : total
+  }
+
+  const finalizeSale = async () => {
+    if (cart.length === 0) {
+      toast.error('Adicione itens ao carrinho primeiro!')
       return
     }
 
-    setSaving(true)
-    const salePayload = {
-      client_name: customerName.trim() || null,
-      client_phone: customerPhone.trim() || null,
-      notes: notes.trim() || null,
+    const total = getTotal()
+    const isInstallment = paymentMethod === 'installment' && installments > 1
+    
+    const saleData = {
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+      total_amount: total,
+      paid_amount: isInstallment ? getInstallmentValue() : total,
       payment_method: paymentMethod,
-      installment_count: paymentMethod === 'installment' ? installmentsCount : null,
-      total_amount: Number(totalAmount.toFixed(2))
+      installment_count: isInstallment ? installments : 1,
+      status: isInstallment ? 'pending' : 'completed',
+      notes: notes || null,
+      created_at: new Date().toISOString()
     }
 
-    const { data: saleData, error: saleError } = await supabase
+    const { data: sale, error: saleError } = await supabase
       .from('sales')
-      .insert([salePayload])
-      .select('id')
-      .single()
-
-    if (saleError || !saleData?.id) {
-      toast.error('Erro ao registrar venda: ' + (saleError?.message || 'erro desconhecido'))
-      setSaving(false)
+      .insert([saleData])
+      .select()
+    
+    if (saleError) {
+      toast.error('Erro ao finalizar venda: ' + saleError.message)
       return
     }
 
-    const saleItemsPayload = cartItems.map((item) => ({
-      sale_id: saleData.id,
-      item_id: item.id,
-      item_type: item.type,
-      item_name: item.name,
-      quantity: item.quantity,
-      unit_price: item.price,
-      subtotal: Number((item.price * item.quantity).toFixed(2))
-    }))
+    const saleId = sale[0].id
 
-    const { error: saleItemsError } = await supabase.from('sale_items').insert(saleItemsPayload)
-    if (saleItemsError) {
-      toast.error('Erro ao registrar itens: ' + saleItemsError.message)
-      setSaving(false)
-      return
-    }
-
-    if (paymentMethod === 'installment') {
-      const installmentsPayload = Array.from({ length: installmentsCount }, (_, index) => {
-        const dueDate = new Date()
-        dueDate.setMonth(dueDate.getMonth() + index + 1)
-        return {
-          sale_id: saleData.id,
-          installment_number: index + 1,
-          amount: installmentValue,
-          due_date: dueDate.toISOString(),
-          status: 'pending'
-        }
-      })
-      const { error: installmentError } = await supabase.from('installments').insert(installmentsPayload)
-      if (installmentError) {
-        toast.error('Erro ao registrar parcelas: ' + installmentError.message)
-        setSaving(false)
-        return
+    for (const item of cart) {
+      const itemData = {
+        sale_id: saleId,
+        item_type: item.type,
+        item_id: item.id,
+        item_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        subtotal: item.subtotal
+      }
+      
+      await supabase.from('sale_items').insert([itemData])
+      
+      if (item.type === 'product') {
+        const { data: product } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.id)
+          .single()
+        
+        const newQuantity = (product?.quantity || 0) - item.quantity
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity, last_sold_at: new Date().toISOString() })
+          .eq('id', item.id)
       }
     }
 
-    await Promise.all(
-      cartItems
-        .filter((item) => item.type === 'product')
-        .map((item) => {
-          const product = products.find((productItem) => productItem.id === item.id)
-          const newQuantity = Math.max(Number(product?.quantity || 0) - item.quantity, 0)
-          return supabase.from('products').update({ quantity: newQuantity, last_sold_at: new Date().toISOString() }).eq('id', item.id)
-        })
-    )
+    if (isInstallment) {
+      const installmentValue = getInstallmentValue()
+      for (let i = 1; i <= installments; i++) {
+        const dueDate = new Date()
+        dueDate.setMonth(dueDate.getMonth() + i)
+        
+        await supabase.from('installments').insert([{
+          sale_id: saleId,
+          installment_number: i,
+          due_date: dueDate.toISOString().split('T')[0],
+          amount: installmentValue,
+          paid_amount: i === 1 ? installmentValue : 0,
+          status: i === 1 ? 'paid' : 'pending'
+        }])
+      }
+    }
 
-    toast.success('Venda concluída com sucesso')
-    clearCart()
+    toast.success('Venda finalizada com sucesso!')
+    setCart([])
     setCustomerName('')
     setCustomerPhone('')
     setNotes('')
     setPaymentMethod('cash')
-    setInstallmentsCount(2)
-    setSaleFinished(true)
-    setSaving(false)
+    setInstallments(1)
+    fetchData()
+  }
+
+  const formatCurrency = (value) => {
+    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   }
 
   if (loading) {
-    return <Loading message="Carregando vendas..." />
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
   }
 
+  const currentItems = activeTab === 'products' ? products : services
+  const itemTypeLabel = activeTab === 'products' ? 'Produto' : 'Serviço'
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Vendas</h1>
-          <p className="page-description">Venda produtos com controle de estoque, pagamento e parcelamento.</p>
-        </div>
+    <div style={{ padding: '16px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Vendas</h1>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Registre vendas de produtos e serviços</p>
       </div>
 
-      <div className="panel-row panel-row-2" style={{ gap: 20 }}>
-        <div>
-          <Card>
-            <div className="form-group">
-              <label className="form-label">Buscar produto</label>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar por nome..."
-                className="form-input"
-              />
-            </div>
-            <div style={{ display: 'grid', gap: 16 }}>
-              {availableProducts.length === 0 ? (
-                <div style={{ color: 'rgba(224,224,224,.72)' }}>Nenhum produto disponível.</div>
-              ) : (
-                availableProducts.map((product) => (
-                  <div key={product.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: 16, borderRadius: 14, background: '#232323' }}>
-                    <div>
-                      <strong>{product.name}</strong>
-                      <div style={{ color: 'rgba(224,224,224,.72)', fontSize: 13 }}>R$ {Number(product.sale_price || 0).toFixed(2)} • Estoque {product.quantity}</div>
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={() => handleAddProduct(product)}>
-                      Adicionar
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        {/* Coluna esquerda: Produtos/Serviços */}
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setActiveTab('products')}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: activeTab === 'products' ? '#3A5F40' : 'transparent',
+                color: activeTab === 'products' ? 'white' : '#E0E0E0',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              📦 Produtos
+            </button>
+            <button
+              onClick={() => setActiveTab('services')}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: activeTab === 'services' ? '#3A5F40' : 'transparent',
+                color: activeTab === 'services' ? 'white' : '#E0E0E0',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              🔧 Serviços
+            </button>
+          </div>
 
-          <Card style={{ marginTop: 20 }}>
-            <div style={{ marginBottom: 16 }}>
-              <h2 className="card-title">Carrinho</h2>
-            </div>
-            {cartItems.length === 0 ? (
-              <div style={{ color: 'rgba(224,224,224,.72)' }}>Adicione produtos ao carrinho para iniciar a venda.</div>
+          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+            {currentItems.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>
+                Nenhum {itemTypeLabel.toLowerCase()} cadastrado.
+              </p>
             ) : (
-              <div style={{ display: 'grid', gap: 14 }}>
-                {cartItems.map((item) => (
-                  <div key={item.uid} style={{ background: '#262626', borderRadius: 16, padding: 14, display: 'grid', gap: 12 }}>
-                    <div className="flex-space">
-                      <div>
-                        <strong>{item.name}</strong>
-                        <div style={{ color: 'rgba(224,224,224,.72)', fontSize: 13 }}>{item.type === 'product' ? 'Produto' : 'Serviço'}</div>
-                      </div>
-                      <div style={{ color: 'rgba(224,224,224,.72)' }}>R$ {item.price.toFixed(2)}</div>
-                    </div>
-                    <div className="flex-space">
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <Button variant="warning" size="sm" type="button" onClick={() => updateQuantity(item.uid, item.quantity - 1)}>
-                          -
-                        </Button>
-                        <span>{item.quantity}</span>
-                        <Button variant="warning" size="sm" type="button" onClick={() => updateQuantity(item.uid, item.quantity + 1)}>
-                          +
-                        </Button>
-                      </div>
-                      <Button variant="danger" size="sm" type="button" onClick={() => removeItem(item.uid)}>
-                        Remover
-                      </Button>
-                    </div>
+              currentItems.map(item => (
+                <div
+                  key={item.id}
+                  style={{
+                    backgroundColor: '#2C2C2C',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>
+                    <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
+                    <p style={{ color: '#D95A1A', margin: '4px 0 0 0', fontSize: '14px' }}>
+                      {formatCurrency(activeTab === 'products' ? item.sale_price : item.price)}
+                    </p>
+                    {activeTab === 'products' && (
+                      <p style={{ color: '#9CA3AF', margin: '4px 0 0 0', fontSize: '12px' }}>
+                        Estoque: {item.quantity || 0}
+                      </p>
+                    )}
                   </div>
-                ))}
-              </div>
+                  <button
+                    onClick={() => addToCart(item, activeTab === 'products' ? 'product' : 'service')}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#3A5F40',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Adicionar
+                  </button>
+                </div>
+              ))
             )}
-          </Card>
+          </div>
         </div>
 
-        <Card>
-          <div className="form-group">
-            <label className="form-label">Nome do cliente</label>
-            <input
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              className="form-input"
-              placeholder="Opcional"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Telefone</label>
-            <input
-              value={customerPhone}
-              onChange={(event) => setCustomerPhone(event.target.value)}
-              className="form-input"
-              placeholder="Opcional"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Observações</label>
-            <textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              className="form-textarea"
-              placeholder="Detalhes sobre a venda"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Forma de pagamento</label>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {paymentMethods.map((method) => (
-                <label key={method.value} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 14, border: '1px solid rgba(255,255,255,.08)' }}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={method.value}
-                    checked={paymentMethod === method.value}
-                    onChange={() => setPaymentMethod(method.value)}
-                  />
-                  <span>{method.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          {paymentMethod === 'installment' && (
-            <div className="form-group">
-              <label className="form-label">Parcelas</label>
-              <select
-                value={installmentsCount}
-                onChange={(event) => setInstallmentsCount(Number(event.target.value))}
-                className="form-select"
-              >
-                {Array.from({ length: 11 }, (_, index) => 2 + index).map((value) => (
-                  <option key={value} value={value}>{value}x</option>
+        {/* Coluna direita: Carrinho e finalização */}
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
+          <h3 style={{ color: '#D95A1A', marginBottom: '16px' }}>🛒 Carrinho</h3>
+          
+          {cart.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>Carrinho vazio</p>
+          ) : (
+            <>
+              <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '16px' }}>
+                {cart.map(item => (
+                  <div
+                    key={`${item.id}-${item.type}`}
+                    style={{
+                      backgroundColor: '#2C2C2C',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      marginBottom: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
+                        <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>{formatCurrency(item.price)}</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            backgroundColor: '#C62828',
+                            color: 'white',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -
+                        </button>
+                        <span style={{ minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            backgroundColor: '#3A5F40',
+                            color: 'white',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => removeFromCart(item.id, item.type)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: '#C62828',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    <p style={{ textAlign: 'right', margin: '8px 0 0 0', color: '#3A5F40' }}>
+                      Subtotal: {formatCurrency(item.subtotal)}
+                    </p>
+                  </div>
                 ))}
-              </select>
-              <div style={{ marginTop: 10, color: 'rgba(224,224,224,.72)' }}>
-                Valor da parcela: <strong>R$ {installmentValue.toFixed(2)}</strong>
               </div>
-            </div>
-          )}
 
-          <div style={{ marginTop: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span>Total</span>
-              <strong>R$ {totalAmount.toFixed(2)}</strong>
-            </div>
-            <Button variant="primary" size="lg" type="button" onClick={handleFinalize} disabled={saving || !cartItems.length} style={{ width: '100%' }}>
-              {saving ? 'Finalizando venda...' : 'Finalizar Venda'}
-            </Button>
-          </div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span>Total:</span>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(getTotal())}</span>
+                </div>
 
-          {saleFinished && (
-            <div className="alert alert-success" style={{ marginTop: 18 }}>
-              Venda registrada com sucesso.
-            </div>
+                <input
+                  type="text"
+                  placeholder="Nome do cliente"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #3A5F40',
+                    backgroundColor: '#2C2C2C',
+                    color: '#E0E0E0',
+                    marginBottom: '12px'
+                  }}
+                />
+
+                <input
+                  type="text"
+                  placeholder="Telefone do cliente"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #3A5F40',
+                    backgroundColor: '#2C2C2C',
+                    color: '#E0E0E0',
+                    marginBottom: '12px'
+                  }}
+                />
+
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #3A5F40',
+                    backgroundColor: '#2C2C2C',
+                    color: '#E0E0E0',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <option value="cash">Dinheiro</option>
+                  <option value="pix">Pix</option>
+                  <option value="card_debit">Cartão Débito</option>
+                  <option value="card_credit">Cartão Crédito</option>
+                  <option value="installment">Parcelado</option>
+                </select>
+
+                {paymentMethod === 'installment' && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <select
+                      value={installments}
+                      onChange={(e) => setInstallments(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: '1px solid #3A5F40',
+                        backgroundColor: '#2C2C2C',
+                        color: '#E0E0E0'
+                      }}
+                    >
+                      {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                        <option key={n} value={n}>{n}x de {formatCurrency(getInstallmentValue())}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <textarea
+                  placeholder="Observações"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows="2"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #3A5F40',
+                    backgroundColor: '#2C2C2C',
+                    color: '#E0E0E0',
+                    marginBottom: '16px',
+                    resize: 'vertical'
+                  }}
+                />
+
+                <button
+                  onClick={finalizeSale}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#3A5F40',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Finalizar Venda
+                </button>
+              </div>
+            </>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   )
