@@ -47,7 +47,17 @@ const Accounts = () => {
       .order('due_date', { ascending: true })
     
     // Buscar contas a pagar (não pagas)
+        // Buscar apenas contas do mês atual (não pagas)
+    const today = new Date()
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    
     const { data: bills } = await supabase
+      .from('bills_to_pay')
+      .select('*')
+      .eq('paid', false)
+      .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
+      .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
       .from('bills_to_pay')
       .select('*')
       .eq('paid', false)
@@ -472,3 +482,5 @@ const Accounts = () => {
 }
 
 export default Accounts
+
+
