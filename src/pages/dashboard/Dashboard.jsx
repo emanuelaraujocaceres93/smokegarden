@@ -93,6 +93,10 @@ const Dashboard = () => {
     }
   }
 
+  const formatCurrency = (value) => {
+    return 'R$ ' + value.toLocaleString('pt-BR')
+  }
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando dashboard...</div>
   }
@@ -141,7 +145,7 @@ const Dashboard = () => {
       }}>
         <StatCard
           label="Vendas do Mês"
-          value={R$ }
+          value={formatCurrency(stats.totalSalesMonth)}
           color="#3A5F40"
           onClick={() => handleCardClick('sales')}
           icon="💰"
@@ -250,7 +254,7 @@ const Dashboard = () => {
                   <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '8px' }}>{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
                     <td style={{ padding: '8px' }}>{s.customer_name || '—'}</td>
-                    <td style={{ padding: '8px' }}>R$ {s.total_amount.toFixed(2)}</td>
+                    <td style={{ padding: '8px' }}>{formatCurrency(s.total_amount)}</td>
                   </tr>
                 ))}
               </tbody>
