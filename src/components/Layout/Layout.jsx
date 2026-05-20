@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
-import {
+import { Users, Truck,  NavLink, Outlet } from 'react-router-dom'
+import { Users, Truck, 
   BarChart3,
   Clock3,
   LayoutDashboard,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 
 const navigation = [
+    { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
+  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
   { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },

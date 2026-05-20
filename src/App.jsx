@@ -10,6 +10,8 @@ import Services from './pages/services/Services'
 import Sales from './pages/sales/Sales'
 import PendingPayments from './pages/pending/PendingPayments'
 import Reports from './pages/reports/Reports'
+import Clients from './pages/clients/Clients'
+import Suppliers from './pages/suppliers/Suppliers'
 import Login from './pages/auth/Login'
 import Loading from './components/ui/Loading'
 
@@ -54,3 +56,4 @@ function App() {
 }
 
 export default App
+
