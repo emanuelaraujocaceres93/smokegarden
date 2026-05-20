@@ -148,12 +148,11 @@ const Reports = () => {
   }
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
   }
 
   return (
     <div ref={reportRef} style={{ padding: '16px' }}>
-      {/* Cabeçalho com botão PDF */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Relatórios</h1>
@@ -178,7 +177,6 @@ const Reports = () => {
         </button>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {periods.map(p => (
           <button
@@ -198,15 +196,9 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Cards Financeiros */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '12px',
-        marginBottom: '24px'
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 Faturamento Bruto</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 Faturamento</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.totalAmount)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
@@ -219,76 +211,10 @@ const Reports = () => {
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
           <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Lucro Líquido</p>
-          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netProfit >= 0 ? '#2E7D32' : '#C62828' }}>
-            {formatCurrency(stats.netProfit)}
-          </p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netProfit >= 0 ? '#2E7D32' : '#C62828' }}>{formatCurrency(stats.netProfit)}</p>
         </div>
       </div>
 
-      {/* Resumo de vendas */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '12px',
-        marginBottom: '24px'
-      }}>
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Total de Vendas</p>
-          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#3A5F40' }}>{stats.totalSales}</p>
-        </div>
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Ticket Médio</p>
-          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.averageTicket)}</p>
-        </div>
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>A Receber</p>
-          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.pendingAmount)}</p>
-        </div>
-      </div>
-
-      {/* Métodos de Pagamento */}
-      {paymentMethods.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>💳 Métodos de Pagamento</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            {paymentMethods.map(m => (
-              <div key={m.method} style={{ flex: 1, minWidth: '80px', textAlign: 'center', padding: '8px', backgroundColor: '#2C2C2C', borderRadius: '8px' }}>
-                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>{m.count}</p>
-                <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '4px 0 0 0' }}>{m.method}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Produtos e Serviços */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {topProducts.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🏆 Produtos Mais Vendidos</h3>
-            {topProducts.map((p, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topProducts.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontSize: '13px' }}>{p.name}</span>
-                <span style={{ color: '#F9A825', fontSize: '13px', fontWeight: 'bold' }}>{p.quantity} und</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {topServices.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🔧 Serviços Mais Vendidos</h3>
-            {topServices.map((s, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topServices.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontSize: '13px' }}>{s.name}</span>
-                <span style={{ color: '#F9A825', fontSize: '13px', fontWeight: 'bold' }}>{s.quantity} und</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Lista de Vendas */}
       {sales.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
           <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📋 Últimas Vendas</h3>
@@ -309,13 +235,7 @@ const Reports = () => {
                     <td style={{ padding: '8px' }}>{sale.customer_name || '—'}</td>
                     <td style={{ padding: '8px', color: '#3A5F40', fontWeight: 'bold' }}>{formatCurrency(sale.total_amount)}</td>
                     <td style={{ padding: '8px' }}>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        backgroundColor: sale.status === 'completed' ? '#2E7D3222' : '#C6282822',
-                        color: sale.status === 'completed' ? '#2E7D32' : '#C62828'
-                      }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', backgroundColor: sale.status === 'completed' ? '#2E7D3222' : '#C6282822', color: sale.status === 'completed' ? '#2E7D32' : '#C62828' }}>
                         {sale.status === 'completed' ? 'Pago' : 'Pendente'}
                       </span>
                     </td>
@@ -324,7 +244,6 @@ const Reports = () => {
               </tbody>
             </table>
           </div>
-          {sales.length > 10 && <p style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', marginTop: '12px' }}>Mostrando 10 de {sales.length} vendas</p>}
         </div>
       )}
     </div>
