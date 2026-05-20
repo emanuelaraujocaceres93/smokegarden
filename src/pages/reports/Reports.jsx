@@ -12,12 +12,13 @@ const Reports = () => {
     totalAmount: 0,
     averageTicket: 0,
     paidAmount: 0,
-    pendingAmount: 0
+    pendingAmount: 0,
+    expensesPaid: 0,
+    netProfit: 0
   })
   const [paymentMethods, setPaymentMethods] = useState({})
   const [topProducts, setTopProducts] = useState([])
   const [topServices, setTopServices] = useState([])
-  const [showDeleteModal, setShowDeleteModal] = useState(null)
 
   const periods = [
     { value: 'day', label: 'Hoje', days: 1 },
@@ -46,13 +47,21 @@ const Reports = () => {
     setLoading(true)
     const { start, end } = getDateRange()
     
-    // Buscar vendas
+    // Buscar vendas do período
     const { data: allSales } = await supabase
       .from('sales')
       .select('*')
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
+    
+    // Buscar contas pagas no período
+    const { data: paidBills } = await supabase
+      .from('bills_to_pay')
+      .select('*')
+      .eq('paid', true)
+      .gte('paid_date', start.toISOString().split('T')[0])
+      .lte('paid_date', end.toISOString().split('T')[0])
     
     // Buscar itens de venda
     const { data: saleItems } = await supabase
@@ -62,6 +71,8 @@ const Reports = () => {
     // Calcular estatísticas
     const totalAmount = (allSales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
     const paidAmount = (allSales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+    const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
+    const netProfit = paidAmount - expensesPaid
     
     // Métodos de pagamento
     const methods = {}
@@ -115,37 +126,15 @@ const Reports = () => {
       totalAmount: totalAmount,
       averageTicket: (allSales || []).length > 0 ? totalAmount / (allSales || []).length : 0,
       paidAmount: paidAmount,
-      pendingAmount: totalAmount - paidAmount
+      pendingAmount: totalAmount - paidAmount,
+      expensesPaid: expensesPaid,
+      netProfit: netProfit
     })
     setLoading(false)
   }
 
-  const deleteSale = async (saleId) => {
-    try {
-      // Deletar parcelas
-      await supabase.from('installments').delete().eq('sale_id', saleId)
-      // Deletar itens da venda
-      await supabase.from('sale_items').delete().eq('sale_id', saleId)
-      // Deletar venda
-      const { error } = await supabase.from('sales').delete().eq('id', saleId)
-      
-      if (error) throw error
-      
-      toast.success('Venda excluída com sucesso!')
-      setShowDeleteModal(null)
-      fetchData()
-    } catch (error) {
-      toast.error('Erro ao excluir venda: ' + error.message)
-    }
-  }
-
   const formatCurrency = (value) => {
-    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  }
-
-  const getPeriodLabel = () => {
-    const p = periods.find(p => p.value === period)
-    return p ? p.label : 'Mês'
+    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   }
 
   if (loading) {
@@ -172,8 +161,7 @@ const Reports = () => {
               border: period === p.value ? 'none' : '1px solid #3A5F40',
               backgroundColor: period === p.value ? '#3A5F40' : 'transparent',
               color: period === p.value ? 'white' : '#E0E0E0',
-              cursor: 'pointer',
-              fontWeight: period === p.value ? 'bold' : 'normal'
+              cursor: 'pointer'
             }}
           >
             {p.label}
@@ -181,53 +169,63 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Cards de estatísticas */}
+      {/* Cards Financeiros */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '16px',
+        gap: '12px',
         marginBottom: '24px'
       }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px' }}>💰</div>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>Total de Vendas</p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#3A5F40' }}>{stats.totalSales}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 Faturamento Bruto</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.totalAmount)}</p>
         </div>
-        
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px' }}>💵</div>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>Faturamento</p>
-          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(stats.totalAmount)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>✅ Recebido</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.paidAmount)}</p>
         </div>
-        
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px' }}>🎫</div>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>Ticket Médio</p>
-          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.averageTicket)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>📉 Despesas Pagas</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.expensesPaid)}</p>
         </div>
-        
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px' }}>✅</div>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>Recebido</p>
-          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.paidAmount)}</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Lucro Líquido</p>
+          <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.netProfit >= 0 ? '#2E7D32' : '#C62828' }}>
+            {formatCurrency(stats.netProfit)}
+          </p>
         </div>
-        
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px' }}>⏳</div>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>A Receber</p>
-          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.pendingAmount)}</p>
+      </div>
+
+      {/* Cards de resumo de vendas */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: '12px',
+        marginBottom: '24px'
+      }}>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Total de Vendas</p>
+          <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#3A5F40' }}>{stats.totalSales}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>Ticket Médio</p>
+          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.averageTicket)}</p>
+        </div>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '11px' }}>A Receber</p>
+          <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.pendingAmount)}</p>
         </div>
       </div>
 
       {/* Métodos de Pagamento */}
       {paymentMethods.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>💳 Métodos de Pagamento</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>💳 Métodos de Pagamento</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {paymentMethods.map(m => (
-              <div key={m.method} style={{ flex: 1, minWidth: '100px', textAlign: 'center', padding: '12px', backgroundColor: '#2C2C2C', borderRadius: '8px' }}>
-                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>{m.count}</p>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '4px 0 0 0' }}>{m.method}</p>
+              <div key={m.method} style={{ flex: 1, minWidth: '80px', textAlign: 'center', padding: '8px', backgroundColor: '#2C2C2C', borderRadius: '8px' }}>
+                <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>{m.count}</p>
+                <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '4px 0 0 0' }}>{m.method}</p>
               </div>
             ))}
           </div>
@@ -235,142 +233,69 @@ const Reports = () => {
       )}
 
       {/* Produtos e Serviços Mais Vendidos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {topProducts.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>🏆 Produtos Mais Vendidos</h3>
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🏆 Produtos Mais Vendidos</h3>
             {topProducts.map((p, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: idx === topProducts.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontWeight: 'bold' }}>{p.name}</span>
-                <span style={{ color: '#F9A825', fontWeight: 'bold' }}>{p.quantity} und</span>
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topProducts.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ fontSize: '13px' }}>{p.name}</span>
+                <span style={{ color: '#F9A825', fontSize: '13px', fontWeight: 'bold' }}>{p.quantity} und</span>
               </div>
             ))}
           </div>
         )}
 
         {topServices.length > 0 && (
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-            <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>🔧 Serviços Mais Vendidos</h3>
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🔧 Serviços Mais Vendidos</h3>
             {topServices.map((s, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: idx === topServices.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontWeight: 'bold' }}>{s.name}</span>
-                <span style={{ color: '#F9A825', fontWeight: 'bold' }}>{s.quantity} und</span>
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topServices.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ fontSize: '13px' }}>{s.name}</span>
+                <span style={{ color: '#F9A825', fontSize: '13px', fontWeight: 'bold' }}>{s.quantity} und</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Lista de Vendas com botão excluir */}
+      {/* Lista de Vendas */}
       {sales.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>📋 Lista de Vendas</h3>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📋 Últimas Vendas</h3>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <th style={{ padding: '12px 8px' }}>Data</th>
-                  <th style={{ padding: '12px 8px' }}>Cliente</th>
-                  <th style={{ padding: '12px 8px' }}>Total</th>
-                  <th style={{ padding: '12px 8px' }}>Status</th>
-                  <th style={{ padding: '12px 8px' }}>Ações</th>
+                  <th style={{ padding: '8px' }}>Data</th>
+                  <th style={{ padding: '8px' }}>Cliente</th>
+                  <th style={{ padding: '8px' }}>Total</th>
+                  <th style={{ padding: '8px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.map((sale, idx) => (
-                  <tr key={sale.id} style={{ borderBottom: idx === sales.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 8px' }}>{format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm')}</td>
-                    <td style={{ padding: '10px 8px' }}>{sale.customer_name || '—'}</td>
-                    <td style={{ padding: '10px 8px', color: '#3A5F40', fontWeight: 'bold' }}>{formatCurrency(sale.total_amount)}</td>
-                    <td style={{ padding: '10px 8px' }}>
+                {sales.slice(0, 10).map((sale) => (
+                  <tr key={sale.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '8px' }}>{format(new Date(sale.created_at), 'dd/MM/yyyy')}</td>
+                    <td style={{ padding: '8px' }}>{sale.customer_name || '—'}</td>
+                    <td style={{ padding: '8px', color: '#3A5F40', fontWeight: 'bold' }}>{formatCurrency(sale.total_amount)}</td>
+                    <td style={{ padding: '8px' }}>
                       <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
                         backgroundColor: sale.status === 'completed' ? '#2E7D3222' : '#C6282822',
                         color: sale.status === 'completed' ? '#2E7D32' : '#C62828'
                       }}>
                         {sale.status === 'completed' ? 'Pago' : 'Pendente'}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 8px' }}>
-                      <button
-                        onClick={() => setShowDeleteModal(sale)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          backgroundColor: '#C6282822',
-                          color: '#C62828',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        Excluir
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* Modal de confirmação de exclusão */}
-      {showDeleteModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px'
-        }}>
-          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
-            <h2 style={{ color: '#C62828', fontSize: '20px', marginBottom: '16px' }}>Confirmar Exclusão</h2>
-            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>
-              Tem certeza que deseja excluir esta venda?
-            </p>
-            <p style={{ color: '#E0E0E0', fontSize: '14px', marginBottom: '20px' }}>
-              <strong>Cliente:</strong> {showDeleteModal.customer_name || 'Não informado'}<br />
-              <strong>Valor:</strong> {formatCurrency(showDeleteModal.total_amount)}<br />
-              <strong>Data:</strong> {format(new Date(showDeleteModal.created_at), 'dd/MM/yyyy HH:mm')}
-            </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => deleteSale(showDeleteModal.id)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  backgroundColor: '#C62828',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
-                Sim, Excluir
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(null)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  backgroundColor: 'transparent',
-                  color: '#9CA3AF',
-                  border: '1px solid #9CA3AF',
-                  borderRadius: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
+          {sales.length > 10 && <p style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', marginTop: '12px' }}>Mostrando 10 de {sales.length} vendas</p>}
         </div>
       )}
     </div>
