@@ -1,8 +1,7 @@
 ﻿import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { CartProvider } from './contexts/CartContext'
+import Login from './pages/auth/Login'
 import Layout from './components/Layout/Layout'
 import Dashboard from './pages/dashboard/Dashboard'
 import Products from './pages/products/Products'
@@ -12,48 +11,54 @@ import PendingPayments from './pages/pending/PendingPayments'
 import Reports from './pages/reports/Reports'
 import Clients from './pages/clients/Clients'
 import Suppliers from './pages/suppliers/Suppliers'
-import Login from './pages/auth/Login'
-import Loading from './components/ui/Loading'
 
-function AppRoutes() {
+function AppContent() {
   const { user, loading, logout } = useAuth()
 
   if (loading) {
-    return <Loading message="Verificando sessão..." />
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#2C2C2C',
+        color: '#E0E0E0'
+      }}>
+        Carregando...
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login />
   }
 
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" />
+    <Layout user={user} onLogout={logout}>
       <Routes>
-        <Route
-          path="/login"
-          element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
-        />
-        <Route element={user ? <Layout user={user} onLogout={logout} /> : <Navigate to="/login" replace />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/sales" element={<Sales />} />
-          <Route path="/pending" element={<PendingPayments />} />
-          <Route path="/reports" element={<Reports />} />
-        </Route>
-        <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/sales" element={<Sales />} />
+        <Route path="/pending" element={<PendingPayments />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/suppliers" element={<Suppliers />} />
       </Routes>
-    </BrowserRouter>
+    </Layout>
   )
 }
 
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <AppRoutes />
-      </CartProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   )
 }
 
 export default App
-
