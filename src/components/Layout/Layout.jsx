@@ -18,7 +18,7 @@ const navigation = [
   { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
   { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
-  { key: 'pending', label: 'Pagamentos', icon: Clock3, path: '/pending' },
+  { key: 'accounts', label: 'Contas', icon: Clock3, path: '/accounts' },
   { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
   { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
   { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' }
@@ -110,3 +110,4 @@ export default function Layout({ user, onLogout, children }) {
     </div>
   )
 }
+

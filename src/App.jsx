@@ -7,7 +7,7 @@ import Dashboard from './pages/dashboard/Dashboard'
 import Products from './pages/products/Products'
 import Services from './pages/services/Services'
 import Sales from './pages/sales/Sales'
-import PendingPayments from './pages/pending/PendingPayments'
+import Accounts from './pages/accounts/Accounts'
 import Reports from './pages/reports/Reports'
 import Clients from './pages/clients/Clients'
 import Suppliers from './pages/suppliers/Suppliers'
@@ -42,7 +42,7 @@ function AppContent() {
         <Route path="/products" element={<Products />} />
         <Route path="/services" element={<Services />} />
         <Route path="/sales" element={<Sales />} />
-        <Route path="/pending" element={<PendingPayments />} />
+        <Route path="/pending" element={<Accounts />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/suppliers" element={<Suppliers />} />
@@ -62,3 +62,4 @@ function App() {
 }
 
 export default App
+
