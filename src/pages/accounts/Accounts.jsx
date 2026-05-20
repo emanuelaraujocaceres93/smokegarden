@@ -35,7 +35,7 @@ const Accounts = () => {
     
     // Buscar vendas - valor recebido
     const { data: sales } = await supabase.from('sales').select('paid_amount')
-    const totalReceived = (sales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+    const totalReceived = ($salesData || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
     
     // Buscar parcelas a receber
     const { data: installments } = await supabase
@@ -60,7 +60,7 @@ const Accounts = () => {
       .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
       .order('due_date', { ascending: true })
     
-    const totalToPay = (bills || []).reduce((sum, b) => sum + b.amount, 0)
+    const totalToPay = ($billsData || []).reduce((sum, b) => sum + b.amount, 0)
     const balance = totalReceived - totalToPay
     
     setReceivables(installments || [])
@@ -349,3 +349,4 @@ const Accounts = () => {
 }
 
 export default Accounts
+

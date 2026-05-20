@@ -124,8 +124,8 @@ const Reports = () => {
     const { data: taxesConfig } = await supabase.from('taxes').select('*')
     
     // CÁLCULOS
-    const grossRevenue = (allSales || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
-        const totalCost = (saleItems || []).reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)(allSales || []).forEach(sale => {
+    const grossRevenue = ($allSalesData || []).reduce((sum, s) => sum + (s.total_amount || 0), 0)
+        const totalCost = ($saleItemsData || []).reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)(allSales || []).forEach(sale => {
       const method = sale.payment_method || 'outro'
       methods[method] = (methods[method] || 0) + 1
     })
@@ -494,4 +494,5 @@ const Reports = () => {
 }
 
 export default Reports
+
 

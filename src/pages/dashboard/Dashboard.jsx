@@ -54,7 +54,7 @@ const Dashboard = () => {
       .slice(0, 5)
     
     setStats({
-      totalSalesMonth: (sales || []).reduce((sum, s) => sum + s.total_amount, 0),
+      totalSalesMonth: ($salesData || []).reduce((sum, s) => sum + s.total_amount, 0),
       totalProducts: (products || []).length,
       totalServices: (services || []).length,
       lowStockProducts: lowStock.length,
