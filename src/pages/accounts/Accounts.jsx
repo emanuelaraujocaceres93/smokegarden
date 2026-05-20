@@ -230,26 +230,26 @@ const Accounts = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>? Recebido</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 Recebido</p>
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(stats.totalReceived)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>? A Receber</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💸 A Receber</p>
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#F9A825' }}>{formatCurrency(stats.totalToReceive)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? A Pagar</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>🧾 A Pagar</p>
           <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.totalToPay)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? Saldo</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Saldo</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.balance >= 0 ? '#2E7D32' : '#C62828' }}>{formatCurrency(stats.balance)}</p>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-        <button onClick={() => setActiveTab('receber')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'receber' ? '#3A5F40' : 'transparent', color: activeTab === 'receber' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>?? Contas a Receber</button>
-        <button onClick={() => setActiveTab('pagar')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'pagar' ? '#3A5F40' : 'transparent', color: activeTab === 'pagar' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>?? Contas a Pagar</button>
+        <button onClick={() => setActiveTab('receber')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'receber' ? '#3A5F40' : 'transparent', color: activeTab === 'receber' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>💵 Contas a Receber</button>
+        <button onClick={() => setActiveTab('pagar')} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'pagar' ? '#3A5F40' : 'transparent', color: activeTab === 'pagar' ? 'white' : '#E0E0E0', cursor: 'pointer', fontWeight: 'bold' }}>🧾 Contas a Pagar</button>
       </div>
 
       {activeTab === 'receber' && (
@@ -303,8 +303,8 @@ const Accounts = () => {
                       <div>
                         <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{bill.description}</p>
                         <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0' }}>{categories.find(c => c.value === bill.category)?.label || bill.category}</p>
-                        {bill.is_recurring && <p style={{ color: '#F9A825', fontSize: '11px', margin: '4px 0 0 0' }}>?? Recorrente ({bill.recurring_type === 'monthly' ? 'Mensal' : bill.recurring_type === 'weekly' ? 'Semanal' : 'Anual'})</p>}
-                        {bill.notes && <p style={{ color: '#9CA3AF', fontSize: '11px', margin: '4px 0 0 0' }}>?? {bill.notes}</p>}
+                        {bill.is_recurring && <p style={{ color: '#F9A825', fontSize: '11px', margin: '4px 0 0 0' }}>🔄 Recorrente ({bill.recurring_type === 'monthly' ? 'Mensal' : bill.recurring_type === 'weekly' ? 'Semanal' : 'Anual'})</p>}
+                        {bill.notes && <p style={{ color: '#9CA3AF', fontSize: '11px', margin: '4px 0 0 0' }}>📝 {bill.notes}</p>}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828', margin: '0' }}>{formatCurrency(bill.amount)}</p>

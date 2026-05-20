@@ -148,42 +148,42 @@ const Dashboard = () => {
           value={formatCurrency(stats.totalSalesMonth)}
           color="#3A5F40"
           onClick={() => handleCardClick('sales')}
-          icon="??"
+          icon="💰"
         />
         <StatCard
           label="Total Produtos"
           value={stats.totalProducts}
           color="#D95A1A"
           onClick={() => handleCardClick('products')}
-          icon="??"
+          icon="📦"
         />
         <StatCard
           label="Total Serviços"
           value={stats.totalServices}
           color="#D95A1A"
           onClick={() => handleCardClick('services')}
-          icon="??"
+          icon="🛠️"
         />
         <StatCard
           label="Estoque Baixo"
           value={stats.lowStockProducts}
           color="#F9A825"
           onClick={() => handleCardClick('lowStock')}
-          icon="??"
+          icon="⚠️"
         />
         <StatCard
           label="Pagamentos Pendentes"
           value={stats.pendingPayments}
           color="#C62828"
           onClick={() => handleCardClick('pending')}
-          icon="??"
+          icon="💳"
         />
         <StatCard
           label="Produtos a Vencer"
           value={stats.productsExpiring}
           color="#F9A825"
           onClick={() => handleCardClick('expiring')}
-          icon="?"
+          icon="⏰"
         />
       </div>
 
