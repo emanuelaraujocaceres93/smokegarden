@@ -3,11 +3,13 @@ import { supabase } from '../../lib/supabase'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import toast from 'react-hot-toast'
 import html2pdf from 'html2pdf.js'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 const Reports = () => {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('month')
   const [sales, setSales] = useState([])
+  const [paidBillsList, setPaidBillsList] = useState([])
   const [stats, setStats] = useState({
     totalSales: 0,
     grossRevenue: 0,
@@ -20,7 +22,11 @@ const Reports = () => {
   const [paymentMethods, setPaymentMethods] = useState([])
   const [topProducts, setTopProducts] = useState([])
   const [topServices, setTopServices] = useState([])
+  const [lowStockList, setLowStockList] = useState([])
+  const [staleProducts, setStaleProducts] = useState([])
+  const [monthlyRevenue, setMonthlyRevenue] = useState([])
   const [showDeleteModal, setShowDeleteModal] = useState(null)
+  const [showDeleteBillModal, setShowDeleteBillModal] = useState(null)
   const reportRef = useRef(null)
 
   const periods = [
@@ -60,6 +66,18 @@ const Reports = () => {
     }
   }
 
+  const deletePaidBill = async (billId) => {
+    try {
+      const { error } = await supabase.from('bills_to_pay').delete().eq('id', billId)
+      if (error) throw error
+      toast.success('Pagamento removido com sucesso!')
+      setShowDeleteBillModal(null)
+      fetchData()
+    } catch (error) {
+      toast.error('Erro ao remover pagamento: ' + error.message)
+    }
+  }
+
   const fetchData = async () => {
     setLoading(true)
     const { start, end } = getDateRange()
@@ -70,6 +88,8 @@ const Reports = () => {
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString())
       .order('created_at', { ascending: false })
+    
+    const { data: allProducts } = await supabase.from('products').select('*')
     
     const { data: paidBills } = await supabase
       .from('bills_to_pay')
@@ -97,6 +117,21 @@ const Reports = () => {
     const expensesPaid = (paidBills || []).reduce((sum, b) => sum + b.amount, 0)
     const expensesPending = (pendingBillsData || []).reduce((sum, b) => sum + b.amount, 0)
     const netProfit = received - expensesPaid
+    
+    const lowStock = (allProducts || []).filter(p => p.quantity <= (p.min_stock || 5))
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const stale = (allProducts || []).filter(p => {
+      if (!p.last_sold_at) return true
+      return new Date(p.last_sold_at) < sixMonthsAgo
+    })
+    
+    const monthlyData = {}
+    ;(allSales || []).forEach(sale => {
+      const month = format(new Date(sale.created_at), 'MMM/yy')
+      monthlyData[month] = (monthlyData[month] || 0) + (sale.total_amount || 0)
+    })
+    const monthlyChartData = Object.entries(monthlyData).map(([month, total]) => ({ month, total }))
     
     const methods = {}
     ;(allSales || []).forEach(sale => {
@@ -140,9 +175,13 @@ const Reports = () => {
     }))
     
     setSales(allSales || [])
+    setPaidBillsList(paidBills || [])
     setPaymentMethods(methodsFormatted)
     setTopProducts(topProductsList)
     setTopServices(topServicesList)
+    setLowStockList(lowStock.slice(0, 10))
+    setStaleProducts(stale.slice(0, 10))
+    setMonthlyRevenue(monthlyChartData)
     setStats({
       totalSales: (allSales || []).length,
       grossRevenue: grossRevenue,
@@ -176,7 +215,7 @@ const Reports = () => {
   }
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
+    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
   }
 
   return (
@@ -193,9 +232,42 @@ const Reports = () => {
       {/* Filtros */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {periods.map(p => (
-          <button key={p.value} onClick={() => setPeriod(p.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: period === p.value ? 'none' : '1px solid #3A5F40', backgroundColor: period === p.value ? '#3A5F40' : 'transparent', color: period === p.value ? 'white' : '#E0E0E0', cursor: 'pointer' }}>{p.label}</button>
+          <button key={p.value} onClick={() => setPeriod(p.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: period === p.value ? 'none' : '1px solid #3A5F40', backgroundColor: period === p.value ? '#3A5F40' : 'transparent', color: period === p.value ? 'white' : '#E0E0E0', cursor: 'pointer' }}>
+            {p.label}
+          </button>
         ))}
       </div>
+
+      {/* Gráficos */}
+      {monthlyRevenue.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📊 Faturamento por Mês</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="month" stroke="#E0E0E0" />
+              <YAxis stroke="#E0E0E0" />
+              <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: 'none' }} formatter={(value) => formatCurrency(value)} />
+              <Bar dataKey="total" fill="#D95A1A" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {topProducts.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🏆 Produtos Mais Vendidos</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topProducts} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis type="number" stroke="#E0E0E0" />
+              <YAxis type="category" dataKey="name" stroke="#E0E0E0" width={100} />
+              <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: 'none' }} />
+              <Bar dataKey="quantity" fill="#3A5F40" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Cards Financeiros */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
@@ -240,10 +312,63 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Lista de Vendas com botão excluir */}
+      {/* Produtos e Serviços Mais Vendidos */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {topProducts.length > 0 && (
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🏆 Produtos Mais Vendidos</h3>
+            {topProducts.map((p, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topProducts.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
+                <span>{p.name}</span>
+                <span style={{ color: '#F9A825' }}>{p.quantity} und</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {topServices.length > 0 && (
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+            <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>🔧 Serviços Mais Vendidos</h3>
+            {topServices.map((s, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: idx === topServices.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
+                <span>{s.name}</span>
+                <span style={{ color: '#F9A825' }}>{s.quantity} und</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Estoque Baixo */}
+      {lowStockList.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#F9A825', fontSize: '16px', marginBottom: '12px' }}>⚠️ Produtos com Estoque Baixo</h3>
+          {lowStockList.map(p => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <span>{p.name}</span>
+              <span style={{ color: '#F9A825' }}>Estoque: {p.quantity}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Produtos Parados */}
+      {staleProducts.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#C62828', fontSize: '16px', marginBottom: '12px' }}>📦 Produtos Parados (+6 meses)</h3>
+          {staleProducts.map(p => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <span>{p.name}</span>
+              <span>Estoque: {p.quantity}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fluxo de Caixa - Vendas */}
       {sales.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>📋 Lista de Vendas</h3>
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <h3 style={{ color: '#D95A1A', fontSize: '16px', marginBottom: '12px' }}>💰 Fluxo de Caixa - Vendas</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <thead>
@@ -277,7 +402,40 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Modal de exclusão */}
+      {/* Fluxo de Caixa - Despesas Pagas */}
+      {paidBillsList.length > 0 && (
+        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px' }}>
+          <h3 style={{ color: '#C62828', fontSize: '16px', marginBottom: '12px' }}>📉 Fluxo de Caixa - Despesas Pagas</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '8px' }}>Data Pagamento</th>
+                  <th style={{ padding: '8px' }}>Descrição</th>
+                  <th style={{ padding: '8px' }}>Valor</th>
+                  <th style={{ padding: '8px' }}>Categoria</th>
+                  <th style={{ padding: '8px' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paidBillsList.map((bill) => (
+                  <tr key={bill.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '8px' }}>{bill.paid_date ? format(new Date(bill.paid_date), 'dd/MM/yyyy') : format(new Date(bill.created_at), 'dd/MM/yyyy')}</td>
+                    <td style={{ padding: '8px' }}>{bill.description} {bill.is_recurring && '🔄'}</td>
+                    <td style={{ padding: '8px', color: '#C62828', fontWeight: 'bold' }}>{formatCurrency(bill.amount)}</td>
+                    <td style={{ padding: '8px' }}>{bill.category}</td>
+                    <td style={{ padding: '8px' }}>
+                      <button onClick={() => setShowDeleteBillModal(bill)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#C6282822', color: '#C62828', cursor: 'pointer' }}>Remover</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de exclusão de venda */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
@@ -291,6 +449,25 @@ const Reports = () => {
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => deleteSale(showDeleteModal.id)} style={{ flex: 1, padding: '10px', backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Sim, Excluir</button>
               <button onClick={() => setShowDeleteModal(null)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de remoção de despesa */}
+      {showDeleteBillModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>
+            <h2 style={{ color: '#C62828', fontSize: '20px', marginBottom: '16px' }}>Confirmar Remoção</h2>
+            <p style={{ color: '#9CA3AF', marginBottom: '8px' }}>Tem certeza que deseja remover esta despesa paga?</p>
+            <p style={{ color: '#E0E0E0', fontSize: '14px', marginBottom: '20px' }}>
+              <strong>Descrição:</strong> {showDeleteBillModal.description}<br />
+              <strong>Valor:</strong> {formatCurrency(showDeleteBillModal.amount)}<br />
+              <strong>Data:</strong> {showDeleteBillModal.paid_date ? format(new Date(showDeleteBillModal.paid_date), 'dd/MM/yyyy') : format(new Date(showDeleteBillModal.created_at), 'dd/MM/yyyy')}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => deletePaidBill(showDeleteBillModal.id)} style={{ flex: 1, padding: '10px', backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Sim, Remover</button>
+              <button onClick={() => setShowDeleteBillModal(null)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
             </div>
           </div>
         </div>
