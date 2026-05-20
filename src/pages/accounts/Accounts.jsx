@@ -47,7 +47,7 @@ const Accounts = () => {
       .filter(i => i.status !== 'paid')
       .reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
     
-    // Buscar contas a pagar do mês atual
+    // Buscar contas a pagar do mÃªs atual
     const today = new Date()
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
@@ -178,7 +178,7 @@ const Accounts = () => {
       const { error } = await supabase.from('bills_to_pay').delete().eq('id', id)
       if (error) toast.error('Erro ao excluir')
       else {
-        toast.success('Conta excluída!')
+        toast.success('Conta excluÃ­da!')
         fetchData()
       }
     }
@@ -207,13 +207,13 @@ const Accounts = () => {
 
   const categories = [
     { value: 'aluguel', label: 'Aluguel' },
-    { value: 'energia', label: 'Energia Elétrica' },
-    { value: 'agua', label: 'Água' },
+    { value: 'energia', label: 'Energia ElÃ©trica' },
+    { value: 'agua', label: 'Ãgua' },
     { value: 'internet', label: 'Internet/Telefone' },
-    { value: 'funcionarios', label: 'Funcionários' },
+    { value: 'funcionarios', label: 'FuncionÃ¡rios' },
     { value: 'impostos', label: 'Impostos' },
     { value: 'fornecedores', label: 'Fornecedores' },
-    { value: 'manutencao', label: 'Manutenção' },
+    { value: 'manutencao', label: 'ManutenÃ§Ã£o' },
     { value: 'outros', label: 'Outros' }
   ]
 
@@ -225,7 +225,7 @@ const Accounts = () => {
     <div style={{ padding: '16px' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Contas</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie suas finanças</p>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie suas finanÃ§as</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
@@ -265,7 +265,7 @@ const Accounts = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
                         <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>Venda #{inst.sale_id?.slice(0, 8)}</p>
-                        <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0' }}>{inst.sales?.customer_name || 'Cliente não informado'}</p>
+                        <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0' }}>{inst.sales?.customer_name || 'Cliente nÃ£o informado'}</p>
                         <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>Parcela {inst.installment_number}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -332,13 +332,13 @@ const Accounts = () => {
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingBill ? 'Editar Conta' : 'Nova Conta'}</h2>
             <form onSubmit={handleSubmitBill}>
-              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Descrição *</label><input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
+              <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>DescriÃ§Ã£o *</label><input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
               <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Valor *</label><input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
               <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Data de Vencimento *</label><input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required /></div>
               <div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Categoria</label><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}>{categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
               <div style={{ marginBottom: '12px' }}><label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}><input type="checkbox" checked={formData.is_recurring} onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })} /><span style={{ fontSize: '14px' }}>Conta recorrente (se repete automaticamente)</span></label></div>
-              {formData.is_recurring && (<div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Frequência</label><select value={formData.recurring_type} onChange={(e) => setFormData({ ...formData, recurring_type: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select></div>)}
-              <div style={{ marginBottom: '20px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Observações</label><textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} /></div>
+              {formData.is_recurring && (<div style={{ marginBottom: '12px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>FrequÃªncia</label><select value={formData.recurring_type} onChange={(e) => setFormData({ ...formData, recurring_type: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }}><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select></div>)}
+              <div style={{ marginBottom: '20px' }}><label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>ObservaÃ§Ãµes</label><textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} /></div>
               <div style={{ display: 'flex', gap: '12px' }}><button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button><button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button></div>
             </form>
           </div>

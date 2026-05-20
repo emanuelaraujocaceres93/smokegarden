@@ -144,7 +144,7 @@ const Dashboard = () => {
         marginBottom: '32px'
       }}>
         <StatCard
-          label="Vendas do Mês"
+          label="Vendas do MÃªs"
           value={formatCurrency(stats.totalSalesMonth)}
           color="#3A5F40"
           onClick={() => handleCardClick('sales')}
@@ -158,7 +158,7 @@ const Dashboard = () => {
           icon="??"
         />
         <StatCard
-          label="Total Serviços"
+          label="Total ServiÃ§os"
           value={stats.totalServices}
           color="#D95A1A"
           onClick={() => handleCardClick('services')}
@@ -189,14 +189,14 @@ const Dashboard = () => {
 
       {lowStockList.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#F9A825', fontSize: '18px', marginBottom: '12px' }}>?? Produtos com Estoque Baixo</h3>
+          <h3 style={{ color: '#F9A825', fontSize: '18px', marginBottom: '12px' }}>Produtos com Estoque Baixo</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', color: '#9CA3AF', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <th style={{ padding: '8px' }}>Produto</th>
                   <th style={{ padding: '8px' }}>Estoque</th>
-                  <th style={{ padding: '8px' }}>Mínimo</th>
+                  <th style={{ padding: '8px' }}>MÃ­nimo</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,7 +215,7 @@ const Dashboard = () => {
 
       {expiringList.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <h3 style={{ color: '#F9A825', fontSize: '18px', marginBottom: '12px' }}>? Produtos Próximos ao Vencimento</h3>
+          <h3 style={{ color: '#F9A825', fontSize: '18px', marginBottom: '12px' }}>Produtos PrÃ³ximos ao Vencimento</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
               <thead>
@@ -239,7 +239,7 @@ const Dashboard = () => {
 
       {recentSales.length > 0 && (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '12px' }}>Últimas Vendas</h3>
+          <h3 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '12px' }}>Ãšltimas Vendas</h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
               <thead>
@@ -253,7 +253,7 @@ const Dashboard = () => {
                 {recentSales.map((s) => (
                   <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '8px' }}>{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
-                    <td style={{ padding: '8px' }}>{s.customer_name || '—'}</td>
+                    <td style={{ padding: '8px' }}>{s.customer_name || 'â€”'}</td>
                     <td style={{ padding: '8px' }}>{formatCurrency(s.total_amount)}</td>
                   </tr>
                 ))}
