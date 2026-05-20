@@ -42,7 +42,7 @@ function AppContent() {
         <Route path="/products" element={<Products />} />
         <Route path="/services" element={<Services />} />
         <Route path="/sales" element={<Sales />} />
-        <Route path="/pending" element={<Accounts />} />
+        <Route path="/accounts" element={<Accounts />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/suppliers" element={<Suppliers />} />
@@ -62,4 +62,3 @@ function App() {
 }
 
 export default App
-
