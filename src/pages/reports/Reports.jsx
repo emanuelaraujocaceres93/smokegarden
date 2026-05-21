@@ -27,6 +27,9 @@ const Reports = () => {
   const [lowStockList, setLowStockList] = useState([])
   const [staleProducts, setStaleProducts] = useState([])
   const [monthlyRevenue, setMonthlyRevenue] = useState([])
+  const [selectedSale, setSelectedSale] = useState(null)
+  const [saleItemsMap, setSaleItemsMap] = useState({})
+  const [saleInstallmentsMap, setSaleInstallmentsMap] = useState({})
   const [showDeleteModal, setShowDeleteModal] = useState(null)
   const [showDeleteBillModal, setShowDeleteBillModal] = useState(null)
   const reportRef = useRef(null)
@@ -115,6 +118,9 @@ const Reports = () => {
     // Itens de venda
     const { data: saleItems } = await supabase.from('sale_items').select('*')
     
+    // Parcelas de vendas
+    const { data: installments } = await supabase.from('installments').select('*')
+    
     // Configurações de taxas e impostos
     const { data: feesConfig } = await supabase.from('payment_fees').select('*')
     const { data: taxesConfig } = await supabase.from('taxes').select('*')
@@ -122,6 +128,7 @@ const Reports = () => {
     // Garantir arrays
     const salesArray = allSales || []
     const itemsArray = saleItems || []
+    const installmentsArray = installments || []
     const paidArray = paidBills || []
     const pendingArray = pendingBillsData || []
     const productsArray = allProducts || []
@@ -202,8 +209,26 @@ const Reports = () => {
       method: methodLabels[key] || key, count: value
     }))
     
+    const itemsBySale = itemsArray.reduce((acc, item) => {
+      const saleId = item.sale_id
+      if (!saleId) return acc
+      acc[saleId] = acc[saleId] || []
+      acc[saleId].push(item)
+      return acc
+    }, {})
+
+    const installmentsBySale = installmentsArray.reduce((acc, inst) => {
+      const saleId = inst.sale_id
+      if (!saleId) return acc
+      acc[saleId] = acc[saleId] || []
+      acc[saleId].push(inst)
+      return acc
+    }, {})
+
     setSales(salesArray)
     setPaidBillsList(paidArray)
+    setSaleItemsMap(itemsBySale)
+    setSaleInstallmentsMap(installmentsBySale)
     setPaymentMethods(methodsFormatted)
     setTopProducts(topProductsList)
     setTopServices(topServicesList)
@@ -235,6 +260,14 @@ const Reports = () => {
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     }).from(reportRef.current).save()
+  }
+
+  const openSaleDetails = (sale) => {
+    setSelectedSale(sale)
+  }
+
+  const closeSaleDetails = () => {
+    setSelectedSale(null)
   }
 
   if (loading) return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
@@ -421,7 +454,8 @@ const Reports = () => {
                         {sale.status === 'completed' ? 'Pago' : 'Pendente'}
                       </span>
                     </td>
-                    <td style={{ padding: '8px' }}>
+                    <td style={{ padding: '8px', display: 'flex', gap: '8px' }}>
+                      <button onClick={() => openSaleDetails(sale)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#3A5F4022', color: '#3A5F40', cursor: 'pointer' }}>Detalhes</button>
                       <button onClick={() => setShowDeleteModal(sale)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#C6282822', color: '#C62828', cursor: 'pointer' }}>Excluir</button>
                     </td>
                   </tr>
@@ -466,6 +500,81 @@ const Reports = () => {
       )}
 
       {/* Modal Excluir Venda */}
+      {selectedSale && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+          <div style={{ background: '#1A1A1A', borderRadius: '12px', maxWidth: '520px', width: '100%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ color: '#D95A1A', fontSize: '20px', marginBottom: '16px' }}>Detalhes da Venda</h2>
+            <p><strong>Venda:</strong> #{selectedSale.id?.slice(0, 8)}<br />
+            <strong>Cliente:</strong> {selectedSale.customer_name || 'Não informado'}<br />
+            <strong>Data:</strong> {format(new Date(selectedSale.created_at), 'dd/MM/yyyy HH:mm')}<br />
+            <strong>Valor total:</strong> {formatCurrency(selectedSale.total_amount)}<br />
+            <strong>Status:</strong> {selectedSale.status === 'completed' ? 'Pago' : 'Pendente'}<br />
+            <strong>Pagamento:</strong> {selectedSale.payment_method === 'installment' ? `Parcelado (${selectedSale.installment_count}x)` : selectedSale.payment_method}</p>
+            <div style={{ background: '#121212', borderRadius: '12px', padding: '16px', marginTop: '16px' }}>
+              <h3 style={{ color: '#D95A1A', marginBottom: '12px' }}>Itens Vendidos</h3>
+              {(saleItemsMap[selectedSale.id] || []).length > 0 ? (
+                <div style={{ width: '100%', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                        <th style={{ padding: '8px' }}>Nome</th>
+                        <th style={{ padding: '8px' }}>Qtd</th>
+                        <th style={{ padding: '8px' }}>Preço</th>
+                        <th style={{ padding: '8px' }}>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {saleItemsMap[selectedSale.id].map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '8px' }}>{item.item_name}</td>
+                          <td style={{ padding: '8px' }}>{item.quantity}</td>
+                          <td style={{ padding: '8px' }}>{formatCurrency(item.unit_price)}</td>
+                          <td style={{ padding: '8px' }}>{formatCurrency(item.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ color: '#9CA3AF' }}>Nenhum item cadastrado para esta venda.</p>
+              )}
+            </div>
+            {selectedSale.payment_method === 'installment' && (saleInstallmentsMap[selectedSale.id] || []).length > 0 && (
+              <div style={{ background: '#121212', borderRadius: '12px', padding: '16px', marginTop: '16px' }}>
+                <h3 style={{ color: '#D95A1A', marginBottom: '12px' }}>Parcelas</h3>
+                <div style={{ width: '100%', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                        <th style={{ padding: '8px' }}>Parcela</th>
+                        <th style={{ padding: '8px' }}>Vence</th>
+                        <th style={{ padding: '8px' }}>Valor</th>
+                        <th style={{ padding: '8px' }}>Pago</th>
+                        <th style={{ padding: '8px' }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {saleInstallmentsMap[selectedSale.id].map((inst, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '8px' }}>{inst.installment_number}</td>
+                          <td style={{ padding: '8px' }}>{format(new Date(inst.due_date), 'dd/MM/yyyy')}</td>
+                          <td style={{ padding: '8px' }}>{formatCurrency(inst.amount)}</td>
+                          <td style={{ padding: '8px' }}>{formatCurrency(inst.paid_amount)}</td>
+                          <td style={{ padding: '8px' }}>{inst.status === 'paid' ? 'Pago' : 'Pendente'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button onClick={closeSaleDetails} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDeleteModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ background: '#1A1A1A', borderRadius: '12px', maxWidth: '400px', width: '100%', padding: '24px' }}>

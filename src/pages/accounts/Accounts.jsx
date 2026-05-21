@@ -37,27 +37,31 @@ const Accounts = () => {
     const { data: sales } = await supabase.from('sales').select('paid_amount')
     const totalReceived = (sales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
     
-    // Buscar parcelas a receber
-    const { data: installments } = await supabase
-      .from('installments')
-      .select('*, sales(customer_name)')
-      .order('due_date', { ascending: true })
-    
-    const totalToReceive = (installments || [])
-      .filter(i => i.status !== 'paid')
-      .reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
-    
-    // Buscar contas a pagar do mês atual
+    // Buscar parcelas a receber do mês atual
     const today = new Date()
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    const fromDate = firstDayOfMonth.toISOString().split('T')[0]
+    const toDate = lastDayOfMonth.toISOString().split('T')[0]
+
+    const { data: installments } = await supabase
+      .from('installments')
+      .select('*, sales(customer_name)')
+      .neq('status', 'paid')
+      .gte('due_date', fromDate)
+      .lte('due_date', toDate)
+      .order('due_date', { ascending: true })
     
+    const totalToReceive = (installments || [])
+      .reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
+    
+    // Buscar contas a pagar do mês atual
     const { data: bills } = await supabase
       .from('bills_to_pay')
       .select('*')
       .eq('paid', false)
-      .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
-      .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
+      .gte('due_date', fromDate)
+      .lte('due_date', toDate)
       .order('due_date', { ascending: true })
     
     const totalToPay = (bills || []).reduce((sum, b) => sum + b.amount, 0)
