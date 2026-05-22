@@ -1,9 +1,19 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { format, subDays, startOfDay, endOfDay, subMonths } from 'date-fns'
 import toast from 'react-hot-toast'
 import html2pdf from 'html2pdf.js'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+
+const REPORT_PERIODS = [
+  { value: 'day', label: 'Hoje', days: 1 },
+  { value: 'week', label: 'Semana', days: 7 },
+  { value: 'twoWeeks', label: 'Quinzena', days: 15 },
+  { value: 'month', label: 'Mês', days: 30 },
+  { value: 'quarter', label: 'Trimestre', days: 90 },
+  { value: 'semester', label: 'Semestre', days: 180 },
+  { value: 'year', label: 'Ano', days: 365 }
+]
 
 const Reports = () => {
   const [loading, setLoading] = useState(true)
@@ -34,24 +44,11 @@ const Reports = () => {
   const [showDeleteBillModal, setShowDeleteBillModal] = useState(null)
   const reportRef = useRef(null)
 
-  const COLORS = ['#D95A1A', '#3A5F40', '#F9A825', '#C62828', '#2E7D32']
-
-  const periods = [
-    { value: 'day', label: 'Hoje', days: 1 },
-    { value: 'week', label: 'Semana', days: 7 },
-    { value: 'twoWeeks', label: 'Quinzena', days: 15 },
-    { value: 'month', label: 'Mês', days: 30 },
-    { value: 'quarter', label: 'Trimestre', days: 90 },
-    { value: 'semester', label: 'Semestre', days: 180 },
-    { value: 'year', label: 'Ano', days: 365 }
-  ]
-
-  useEffect(() => { fetchData() }, [period])
 
   const getDateRange = () => {
     const end = new Date()
-    let start = new Date()
-    const periodObj = periods.find(p => p.value === period)
+    let start
+    const periodObj = REPORT_PERIODS.find(p => p.value === period)
     const days = periodObj ? periodObj.days : 30
     start = subDays(end, days)
     return { start: startOfDay(start), end: endOfDay(end) }
@@ -81,7 +78,7 @@ const Reports = () => {
     }
   }
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true)
     const { start, end } = getDateRange()
 
@@ -106,17 +103,6 @@ const Reports = () => {
         .lte('paid_date', end.toISOString().split('T')[0])
       if (paidBillsError) throw paidBillsError
 
-      const today = new Date()
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      const { data: pendingBillsData, error: pendingBillsError } = await supabase
-        .from('bills_to_pay')
-        .select('*')
-        .eq('paid', false)
-        .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
-        .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
-      if (pendingBillsError) throw pendingBillsError
-
       const { data: saleItems, error: saleItemsError } = await supabase.from('sale_items').select('*')
       if (saleItemsError) throw saleItemsError
 
@@ -132,8 +118,6 @@ const Reports = () => {
       const salesArray = allSales || []
       const itemsArray = saleItems || []
       const installmentsArray = installments || []
-      const paidArray = paidBills || []
-      const pendingArray = pendingBillsData || []
       const productsArray = allProducts || []
 
       const grossRevenue = salesArray.reduce((sum, s) => sum + (s.total_amount || 0), 0)
@@ -157,7 +141,7 @@ const Reports = () => {
         }
       }
 
-      const expensesPaid = paidArray.reduce((sum, b) => sum + (b.amount || 0), 0)
+      const expensesPaid = (paidBills || []).reduce((sum, b) => sum + (b.amount || 0), 0)
       const netProfit = grossProfit - fees - taxes - expensesPaid
       const netMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0
 
@@ -225,7 +209,7 @@ const Reports = () => {
       Object.values(installmentsBySale).forEach(list => list.sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0)))
 
       setSales(salesArray)
-      setPaidBillsList(paidArray)
+      setPaidBillsList(paidBills || [])
       setSaleItemsMap(itemsBySale)
       setSaleInstallmentsMap(installmentsBySale)
       setPaymentMethods(methodsFormatted)
@@ -252,6 +236,9 @@ const Reports = () => {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData() }, [period])
+
   const formatCurrency = (value) => 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   
   const generatePDF = () => {
@@ -273,7 +260,6 @@ const Reports = () => {
     setSelectedSale(null)
   }
 
-  const selectedSaleItems = selectedSale ? saleItemsMap[selectedSale.id] || [] : []
   const selectedSaleInstallments = selectedSale ? saleInstallmentsMap[selectedSale.id] || [] : []
   const selectedSalePaid = selectedSaleInstallments.length > 0
     ? selectedSaleInstallments.reduce((sum, inst) => sum + (inst.paid_amount || 0), 0)
@@ -297,7 +283,7 @@ const Reports = () => {
 
       {/* Filtros */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
-        {periods.map(p => (
+        {REPORT_PERIODS.map(p => (
           <button key={p.value} onClick={() => setPeriod(p.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: period === p.value ? 'none' : '1px solid #3A5F40', backgroundColor: period === p.value ? '#3A5F40' : 'transparent', color: period === p.value ? 'white' : '#E0E0E0', cursor: 'pointer' }}>
             {p.label}
           </button>

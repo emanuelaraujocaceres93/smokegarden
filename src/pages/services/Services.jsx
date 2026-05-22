@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import Card from '../../components/ui/Card'
@@ -13,7 +13,7 @@ const Services = () => {
 
   useEffect(() => { fetchServices() }, [])
 
-  const fetchServices = async () => {
+  async function fetchServices() {
     setLoading(true)
     const { data } = await supabase.from('services').select('*').order('name')
     setServices(data || [])
@@ -53,8 +53,8 @@ const Services = () => {
         title="Serviços" 
         description="Gerencie os serviços oferecidos"
         actions={
-          <button onClick={() => { setEditing(null); setForm({ name: '', description: '', price: '', estimated_hours: '' }); setShowModal(true) }}
-            className="bg-garden text-white px-4 py-2 rounded-lg hover:bg-green-700 w-full md:w-auto">
+          <button type="button" onClick={() => { setEditing(null); setForm({ name: '', description: '', price: '', estimated_hours: '' }); setShowModal(true) }}
+            className="btn btn-primary btn-md">
             + Novo Serviço
           </button>
         }
@@ -62,18 +62,22 @@ const Services = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {services.map(s => (
-          <Card key={s.id}>
-            <div className="flex justify-between items-start">
+          <Card key={s.id} className="service-card">
+            <div className="flex flex-col gap-4">
               <div>
                 <h3 className="font-bold text-white">{s.name}</h3>
-                {s.description && <p className="text-grayLight text-sm mt-1">{s.description}</p>}
-                <p className="text-burnt font-bold mt-2">R$ {s.price?.toFixed(2) || '0.00'}</p>
-                {s.estimated_hours && <p className="text-grayLight text-xs mt-1">{s.estimated_hours}h estimados</p>}
+                {s.description && <p className="text-grayLight text-sm mt-2">{s.description}</p>}
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setEditing(s); setForm({ name: s.name, description: s.description || '', price: s.price, estimated_hours: s.estimated_hours || '' }); setShowModal(true) }} 
-                  className="text-garden hover:text-green-400">Editar</button>
-                <button onClick={() => handleDelete(s.id)} className="text-alertRed hover:text-red-400">Excluir</button>
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-burnt font-bold">R$ {s.price?.toFixed(2) || '0.00'}</p>
+                  {s.estimated_hours && <p className="text-grayLight text-xs mt-1">{s.estimated_hours}h estimados</p>}
+                </div>
+                <div className="service-card-actions">
+                  <button type="button" onClick={() => { setEditing(s); setForm({ name: s.name, description: s.description || '', price: s.price, estimated_hours: s.estimated_hours || '' }); setShowModal(true) }} 
+                    className="btn btn-secondary btn-sm">Editar</button>
+                  <button type="button" onClick={() => handleDelete(s.id)} className="btn btn-danger btn-sm">Excluir</button>
+                </div>
               </div>
             </div>
           </Card>

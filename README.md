@@ -1,16 +1,66 @@
-# React + Vite
+# Smoke Garden Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend web da aplicação Smoke Garden, construído com React + Vite.
 
-Currently, two official plugins are available:
+## Visão geral
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Esta pasta contém a aplicação React que consome a API do Supabase e oferece os módulos principais do sistema:
 
-## React Compiler
+- Dashboard
+- Vendas
+- Relatórios
+- Contas (clientes/fornecedores)
+- Serviços
+- Produtos
+- Configurações
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Pré-requisitos
 
-## Expanding the ESLint configuration
+É necessário ter instalado:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Node.js 18 ou superior
+- npm 10 ou superior
+
+## Instalação
+
+1. Abra um terminal em `frontend`
+2. Execute:
+
+```bash
+npm install
+```
+
+## Comandos úteis
+
+No diretório `frontend`:
+
+- `npm run dev` — inicia o servidor de desenvolvimento com HMR
+- `npm run build` — gera a versão de produção
+- `npm run preview` — visualiza o build de produção localmente
+- `npm run lint` — executa o ESLint em todo o código
+
+## Estrutura principal
+
+- `src/main.jsx` — ponto de entrada da aplicação
+- `src/App.jsx` — roteamento e layout principal
+- `src/pages/` — páginas principais da aplicação
+- `src/components/` — componentes reutilizáveis da interface
+- `src/contexts/` — providers de contexto como autenticação e carrinho
+- `src/lib/supabase.js` — configuração do cliente Supabase
+- `src/styles/` — estilos globais e tema
+
+## Boas práticas
+
+- Mantenha componentes funcionais leves e com hooks bem definidos.
+- Use `useEffect` apenas para efeitos laterais e carregamento de dados.
+- Centralize chamadas ao Supabase em `src/lib/supabase.js` ou hooks próprios.
+- Execute `npm run lint` antes de commits para evitar avisos de ESLint.
+
+## Notas importantes
+
+- O projeto usa o React moderno com `jsx` sem necessidade de `import React` em cada arquivo.
+- O frontend está integrado ao Supabase e depende da configuração de ambiente definida na raiz do projeto.
+
+## Contato
+
+Para dúvidas sobre este frontend, consulte a equipe de desenvolvimento ou os arquivos de configuração do projeto.

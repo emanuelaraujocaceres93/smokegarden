@@ -1,7 +1,36 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { format } from 'date-fns'
+
+const StatCard = ({ label, value, color, onClick, icon }) => (
+  <div
+    onClick={onClick}
+    style={{
+      backgroundColor: '#1A1A1A',
+      borderRadius: '12px',
+      padding: '16px',
+      textAlign: 'center',
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'all 0.2s ease',
+      border: '1px solid rgba(255,255,255,0.08)'
+    }}
+    onMouseEnter={(e) => {
+      if (onClick) {
+        e.currentTarget.style.transform = 'translateY(-4px)'
+        e.currentTarget.style.borderColor = '#D95A1A'
+      }
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)'
+      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+    }}
+  >
+    {icon && <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>}
+    <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>{label}</p>
+    <p style={{ fontSize: '24px', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
+  </div>
+)
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -19,54 +48,54 @@ const Dashboard = () => {
   const [recentSales, setRecentSales] = useState([])
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    const loadDashboardData = async () => {
+      setLoading(true)
+      
+      const { data: products } = await supabase.from('products').select('*')
+      const { data: services } = await supabase.from('services').select('*')
+      const { data: installments } = await supabase.from('installments').select('*').eq('status', 'pending')
+      
+      const firstDayOfMonth = new Date()
+      firstDayOfMonth.setDate(1)
+      firstDayOfMonth.setHours(0, 0, 0, 0)
+      
+      const { data: sales } = await supabase
+        .from('sales')
+        .select('*')
+        .gte('created_at', firstDayOfMonth.toISOString())
+      
+      const lowStock = (products || []).filter(p => p.quantity <= (p.min_stock || 5))
+      
+      const thirtyDaysFromNow = new Date()
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+      
+      const expiring = (products || []).filter(p => {
+        if (!p.has_expiry || !p.expiry_date) return false
+        const expiryDate = new Date(p.expiry_date)
+        return expiryDate > new Date() && expiryDate < thirtyDaysFromNow
+      })
+      
+      const recent = (sales || [])
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+      
+      setStats({
+        totalSalesMonth: (sales || []).reduce((sum, s) => sum + s.total_amount, 0),
+        totalProducts: (products || []).length,
+        totalServices: (services || []).length,
+        lowStockProducts: lowStock.length,
+        pendingPayments: (installments || []).length,
+        productsExpiring: expiring.length
+      })
+      
+      setLowStockList(lowStock.slice(0, 10))
+      setExpiringList(expiring.slice(0, 10))
+      setRecentSales(recent)
+      setLoading(false)
+    }
 
-  const fetchDashboardData = async () => {
-    setLoading(true)
-    
-    const { data: products } = await supabase.from('products').select('*')
-    const { data: services } = await supabase.from('services').select('*')
-    const { data: installments } = await supabase.from('installments').select('*').eq('status', 'pending')
-    
-    const firstDayOfMonth = new Date()
-    firstDayOfMonth.setDate(1)
-    firstDayOfMonth.setHours(0, 0, 0, 0)
-    
-    const { data: sales } = await supabase
-      .from('sales')
-      .select('*')
-      .gte('created_at', firstDayOfMonth.toISOString())
-    
-    const lowStock = (products || []).filter(p => p.quantity <= (p.min_stock || 5))
-    
-    const thirtyDaysFromNow = new Date()
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-    
-    const expiring = (products || []).filter(p => {
-      if (!p.has_expiry || !p.expiry_date) return false
-      const expiryDate = new Date(p.expiry_date)
-      return expiryDate > new Date() && expiryDate < thirtyDaysFromNow
-    })
-    
-    const recent = (sales || [])
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 5)
-    
-    setStats({
-      totalSalesMonth: (sales || []).reduce((sum, s) => sum + s.total_amount, 0),
-      totalProducts: (products || []).length,
-      totalServices: (services || []).length,
-      lowStockProducts: lowStock.length,
-      pendingPayments: (installments || []).length,
-      productsExpiring: expiring.length
-    })
-    
-    setLowStockList(lowStock.slice(0, 10))
-    setExpiringList(expiring.slice(0, 10))
-    setRecentSales(recent)
-    setLoading(false)
-  }
+    loadDashboardData()
+  }, [])
 
   const handleCardClick = (type) => {
     switch(type) {
@@ -100,35 +129,6 @@ const Dashboard = () => {
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando dashboard...</div>
   }
-
-  const StatCard = ({ label, value, color, onClick, icon }) => (
-    <div
-      onClick={onClick}
-      style={{
-        backgroundColor: '#1A1A1A',
-        borderRadius: '12px',
-        padding: '16px',
-        textAlign: 'center',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.2s ease',
-        border: '1px solid rgba(255,255,255,0.08)'
-      }}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          e.currentTarget.style.transform = 'translateY(-4px)'
-          e.currentTarget.style.borderColor = '#D95A1A'
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-      }}
-    >
-      {icon && <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>}
-      <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>{label}</p>
-      <p style={{ fontSize: '24px', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
-    </div>
-  )
 
   return (
     <div style={{ padding: '16px' }}>

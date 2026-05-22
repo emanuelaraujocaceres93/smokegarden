@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { format, differenceInDays, addMonths, addDays, addYears } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -30,7 +30,7 @@ const Accounts = () => {
     fetchData()
   }, [])
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true)
 
     try {

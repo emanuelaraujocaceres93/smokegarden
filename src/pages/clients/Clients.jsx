@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -18,7 +18,7 @@ const Clients = () => {
     fetchClients()
   }, [])
 
-  const fetchClients = async () => {
+  async function fetchClients() {
     setLoading(true)
     const { data, error } = await supabase
       .from('clients')

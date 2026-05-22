@@ -1,6 +1,7 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
+import PageHeader from '../../components/ui/PageHeader'
 
 const Products = () => {
   const [products, setProducts] = useState([])
@@ -23,7 +24,7 @@ const Products = () => {
     fetchProducts()
   }, [])
 
-  const fetchProducts = async () => {
+  async function fetchProducts() {
     setLoading(true)
     const { data, error } = await supabase
       .from('products')
@@ -146,23 +147,25 @@ const Products = () => {
 
   return (
     <div className="p-4 md:p-6">
-      {/* Cabeçalho */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-burnt">Produtos</h1>
-        <button
-          onClick={() => {
-            setEditingProduct(null)
-            resetForm()
-            setShowModal(true)
-          }}
-          className="bg-garden text-white px-4 py-2 rounded-lg hover:bg-green-700 transition w-full md:w-auto"
-        >
-          + Novo Produto
-        </button>
-      </div>
+      <PageHeader
+        title="Produtos"
+        description="Gerencie o catálogo de produtos, preços, estoque e validade."
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setEditingProduct(null)
+              resetForm()
+              setShowModal(true)
+            }}
+            className="btn btn-primary btn-md"
+          >
+            + Novo Produto
+          </button>
+        }
+      />
 
-      {/* Versão Desktop: Tabela */}
-      <div className="table-desktop-only bg-carbon rounded-lg overflow-hidden border border-gray-700">
+      <div className="panel table-desktop-only">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>

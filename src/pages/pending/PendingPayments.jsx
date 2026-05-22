@@ -1,7 +1,6 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { format, differenceInDays, isBefore } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { format, differenceInDays } from 'date-fns'
 import toast from 'react-hot-toast'
 
 const PendingPayments = () => {
@@ -30,7 +29,7 @@ const PendingPayments = () => {
     fetchData()
   }, [])
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true)
     
     // Buscar parcelas a receber (clientes)
@@ -77,7 +76,7 @@ const PendingPayments = () => {
       toast.success('Conta paga com sucesso!')
       fetchData()
     } catch (error) {
-      toast.error('Erro ao pagar conta')
+      toast.error('Erro ao pagar conta: ' + (error?.message || error))
     }
   }
 
@@ -99,7 +98,7 @@ const PendingPayments = () => {
       toast.success('Pagamento registrado!')
       fetchData()
     } catch (error) {
-      toast.error('Erro ao registrar pagamento')
+      toast.error('Erro ao registrar pagamento: ' + (error?.message || error))
     }
   }
 

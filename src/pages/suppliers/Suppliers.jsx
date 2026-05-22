@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -15,11 +15,7 @@ const Suppliers = () => {
   })
   const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    fetchSuppliers()
-  }, [])
-
-  const fetchSuppliers = async () => {
+  const refreshSuppliers = async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('suppliers')
@@ -33,6 +29,11 @@ const Suppliers = () => {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshSuppliers()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -77,7 +78,7 @@ const Suppliers = () => {
     setShowModal(false)
     setEditingSupplier(null)
     resetForm()
-    fetchSuppliers()
+    refreshSuppliers()
   }
 
   const resetForm = () => {
@@ -102,7 +103,7 @@ const Suppliers = () => {
         toast.error('Erro ao excluir fornecedor')
       } else {
         toast.success('Fornecedor excluído!')
-        fetchSuppliers()
+        refreshSuppliers()
       }
     }
   }

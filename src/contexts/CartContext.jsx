@@ -1,21 +1,18 @@
-﻿import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+﻿/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const CartContext = createContext(null)
 const STORAGE_KEY = 'smoke-garden-cart'
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([])
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        setCartItems(JSON.parse(saved))
-      } catch {
-        setCartItems([])
-      }
+  const [cartItems, setCartItems] = useState(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]')
+    } catch {
+      return []
     }
-  }, [])
+  })
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cartItems))

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+﻿import { useState } from 'react'
 
 const Button = ({ children, onClick, type = 'button', variant = 'primary' }) => {
   const [hover, setHover] = useState(false)

@@ -1,6 +1,22 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
+
+function Tooltip({ text, isOpen, onToggle }) {
+  return (
+    <span style={{ position: 'relative', marginLeft: '8px', cursor: 'help' }}>
+      <button
+        onClick={onToggle}
+        style={{ background: '#3A5F40', border: 'none', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '12px', cursor: 'pointer' }}
+      >?</button>
+      {isOpen && (
+        <div style={{ position: 'absolute', bottom: '25px', left: '0', background: '#1A1A1A', border: '1px solid #D95A1A', borderRadius: '6px', padding: '8px', width: '220px', fontSize: '12px', zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+          {text}
+        </div>
+      )}
+    </span>
+  )
+}
 
 const Settings = () => {
   const [loading, setLoading] = useState(true)
@@ -20,7 +36,7 @@ const Settings = () => {
     fetchConfigs()
   }, [])
 
-  const fetchConfigs = async () => {
+  async function fetchConfigs() {
     setLoading(true)
     // Buscar taxas de pagamento
     const { data: feesData } = await supabase.from('payment_fees').select('*')
@@ -50,20 +66,6 @@ const Settings = () => {
     fetchConfigs()
   }
 
-  const Tooltip = ({ text }) => (
-    <span style={{ position: 'relative', marginLeft: '8px', cursor: 'help' }}>
-      <button
-        onClick={() => setShowTooltip(showTooltip === text ? null : text)}
-        style={{ background: '#3A5F40', border: 'none', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '12px', cursor: 'pointer' }}
-      >?</button>
-      {showTooltip === text && (
-        <div style={{ position: 'absolute', bottom: '25px', left: '0', background: '#1A1A1A', border: '1px solid #D95A1A', borderRadius: '6px', padding: '8px', width: '220px', fontSize: '12px', zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-          {text}
-        </div>
-      )}
-    </span>
-  )
-
   if (loading) return <div style={{ textAlign: 'center', padding: '40px' }}>Carregando...</div>
 
   return (
@@ -75,7 +77,11 @@ const Settings = () => {
       <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
         <h2 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>
           💳 Taxas por Forma de Pagamento
-          <Tooltip text="Taxas cobradas pelas operadoras (ex: cartão 2%). Aplicadas sobre o valor recebido." />
+          <Tooltip
+            text="Taxas cobradas pelas operadoras (ex: cartão 2%). Aplicadas sobre o valor recebido."
+            isOpen={showTooltip === 'paymentFees'}
+            onToggle={() => setShowTooltip(showTooltip === 'paymentFees' ? null : 'paymentFees')}
+          />
         </h2>
         <div style={{ display: 'grid', gap: '12px' }}>
           {paymentMethods.map(method => {
@@ -102,7 +108,11 @@ const Settings = () => {
       <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
         <h2 style={{ color: '#D95A1A', fontSize: '18px', marginBottom: '16px' }}>
           📊 Impostos
-          <Tooltip text="Impostos aplicados sobre o faturamento (DAS do MEI, ISS, ICMS, etc.)." />
+          <Tooltip
+            text="Impostos aplicados sobre o faturamento (DAS do MEI, ISS, ICMS, etc.)."
+            isOpen={showTooltip === 'taxes'}
+            onToggle={() => setShowTooltip(showTooltip === 'taxes' ? null : 'taxes')}
+          />
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {taxes.map(tax => (

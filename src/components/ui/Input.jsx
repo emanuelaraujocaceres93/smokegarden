@@ -1,4 +1,3 @@
-import React from 'react'
 
 export default function Input({ label, id, textarea = false, error, className = '', ...props }) {
   const controlClass = textarea ? 'form-textarea' : 'form-input'
