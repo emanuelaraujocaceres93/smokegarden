@@ -84,169 +84,172 @@ const Reports = () => {
   const fetchData = async () => {
     setLoading(true)
     const { start, end } = getDateRange()
-    
-    // Vendas do período
-    const { data: allSales } = await supabase
-      .from('sales')
-      .select('*')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString())
-      .order('created_at', { ascending: false })
-    
-    // Produtos
-    const { data: allProducts } = await supabase.from('products').select('*')
-    
-    // Contas pagas no período
-    const { data: paidBills } = await supabase
-      .from('bills_to_pay')
-      .select('*')
-      .eq('paid', true)
-      .gte('paid_date', start.toISOString().split('T')[0])
-      .lte('paid_date', end.toISOString().split('T')[0])
-    
-    // Contas a pagar do mês atual
-    const today = new Date()
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    const { data: pendingBillsData } = await supabase
-      .from('bills_to_pay')
-      .select('*')
-      .eq('paid', false)
-      .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
-      .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
-    
-    // Itens de venda
-    const { data: saleItems } = await supabase.from('sale_items').select('*')
-    
-    // Parcelas de vendas
-    const { data: installments } = await supabase.from('installments').select('*')
-    
-    // Configurações de taxas e impostos
-    const { data: feesConfig } = await supabase.from('payment_fees').select('*')
-    const { data: taxesConfig } = await supabase.from('taxes').select('*')
-    
-    // Garantir arrays
-    const salesArray = allSales || []
-    const itemsArray = saleItems || []
-    const installmentsArray = installments || []
-    const paidArray = paidBills || []
-    const pendingArray = pendingBillsData || []
-    const productsArray = allProducts || []
-    
-    // Cálculos financeiros
-    const grossRevenue = salesArray.reduce((sum, s) => sum + (s.total_amount || 0), 0)
-    const totalCost = itemsArray.reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)
-    const grossProfit = grossRevenue - totalCost
-    const received = salesArray.reduce((sum, s) => sum + (s.paid_amount || 0), 0)
-    
-    let fees = 0
-    if (feesConfig) {
-      for (const sale of salesArray) {
-        const feeConfig = feesConfig.find(f => f.payment_method === sale.payment_method)
-        if (feeConfig && feeConfig.fee_percent) {
-          fees += (sale.paid_amount || 0) * (feeConfig.fee_percent / 100)
+
+    try {
+      const { data: allSales, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .order('created_at', { ascending: false })
+
+      if (salesError) throw salesError
+
+      const { data: allProducts, error: productsError } = await supabase.from('products').select('*')
+      if (productsError) throw productsError
+
+      const { data: paidBills, error: paidBillsError } = await supabase
+        .from('bills_to_pay')
+        .select('*')
+        .eq('paid', true)
+        .gte('paid_date', start.toISOString().split('T')[0])
+        .lte('paid_date', end.toISOString().split('T')[0])
+      if (paidBillsError) throw paidBillsError
+
+      const today = new Date()
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      const { data: pendingBillsData, error: pendingBillsError } = await supabase
+        .from('bills_to_pay')
+        .select('*')
+        .eq('paid', false)
+        .gte('due_date', firstDayOfMonth.toISOString().split('T')[0])
+        .lte('due_date', lastDayOfMonth.toISOString().split('T')[0])
+      if (pendingBillsError) throw pendingBillsError
+
+      const { data: saleItems, error: saleItemsError } = await supabase.from('sale_items').select('*')
+      if (saleItemsError) throw saleItemsError
+
+      const { data: installments, error: installmentsError } = await supabase.from('installments').select('*')
+      if (installmentsError) throw installmentsError
+
+      const { data: feesConfig, error: feesError } = await supabase.from('payment_fees').select('*')
+      if (feesError) throw feesError
+
+      const { data: taxesConfig, error: taxesError } = await supabase.from('taxes').select('*')
+      if (taxesError) throw taxesError
+
+      const salesArray = allSales || []
+      const itemsArray = saleItems || []
+      const installmentsArray = installments || []
+      const paidArray = paidBills || []
+      const pendingArray = pendingBillsData || []
+      const productsArray = allProducts || []
+
+      const grossRevenue = salesArray.reduce((sum, s) => sum + (s.total_amount || 0), 0)
+      const totalCost = itemsArray.reduce((sum, i) => sum + (i.quantity || 0) * (i.purchase_price || 0), 0)
+      const grossProfit = grossRevenue - totalCost
+
+      let fees = 0
+      if (feesConfig) {
+        for (const sale of salesArray) {
+          const feeConfig = feesConfig.find(f => f.payment_method === sale.payment_method)
+          if (feeConfig && feeConfig.fee_percent) {
+            fees += (sale.paid_amount || 0) * (feeConfig.fee_percent / 100)
+          }
         }
       }
-    }
-    
-    let taxes = 0
-    if (taxesConfig) {
-      for (const tax of taxesConfig) {
-        taxes += grossRevenue * (tax.rate_percent / 100)
-      }
-    }
-    
-    const expensesPaid = paidArray.reduce((sum, b) => sum + b.amount, 0)
-    const netProfit = grossProfit - fees - taxes - expensesPaid
-    const netMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0
-    
-    // Estoque baixo
-    const lowStock = productsArray.filter(p => p.quantity <= (p.min_stock || 5))
-    const sixMonthsAgo = subMonths(new Date(), 6)
-    const stale = productsArray.filter(p => !p.last_sold_at || new Date(p.last_sold_at) < sixMonthsAgo)
-    
-    // Faturamento mensal para gráfico
-    const monthlyData = {}
-    salesArray.forEach(sale => {
-      const month = format(new Date(sale.created_at), 'MMM/yy')
-      monthlyData[month] = (monthlyData[month] || 0) + (sale.total_amount || 0)
-    })
-    const monthlyChartData = Object.entries(monthlyData).map(([month, total]) => ({ month, total }))
-    
-    // Métodos de pagamento
-    const methods = {}
-    salesArray.forEach(sale => {
-      const method = sale.payment_method || 'outro'
-      methods[method] = (methods[method] || 0) + 1
-    })
-    
-    // Produtos e serviços mais vendidos
-    const productCount = {}
-    const serviceCount = {}
-    itemsArray.forEach(item => {
-      if (item.item_type === 'product') {
-        productCount[item.item_name] = (productCount[item.item_name] || 0) + (item.quantity || 0)
-      } else if (item.item_type === 'service') {
-        serviceCount[item.item_name] = (serviceCount[item.item_name] || 0) + (item.quantity || 0)
-      }
-    })
-    
-    const topProductsList = Object.entries(productCount)
-      .map(([name, qtd]) => ({ name, quantity: qtd }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5)
-    
-    const topServicesList = Object.entries(serviceCount)
-      .map(([name, qtd]) => ({ name, quantity: qtd }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5)
-    
-    const methodLabels = {
-      cash: 'Dinheiro', pix: 'Pix', card_debit: 'Cartão Débito',
-      card_credit: 'Cartão Crédito', installment: 'Parcelado', outro: 'Outro'
-    }
-    const methodsFormatted = Object.entries(methods).map(([key, value]) => ({
-      method: methodLabels[key] || key, count: value
-    }))
-    
-    const itemsBySale = itemsArray.reduce((acc, item) => {
-      const saleId = item.sale_id
-      if (!saleId) return acc
-      acc[saleId] = acc[saleId] || []
-      acc[saleId].push(item)
-      return acc
-    }, {})
 
-    const installmentsBySale = installmentsArray.reduce((acc, inst) => {
-      const saleId = inst.sale_id
-      if (!saleId) return acc
-      acc[saleId] = acc[saleId] || []
-      acc[saleId].push(inst)
-      return acc
-    }, {})
+      let taxes = 0
+      if (taxesConfig) {
+        for (const tax of taxesConfig) {
+          taxes += grossRevenue * (tax.rate_percent / 100)
+        }
+      }
 
-    setSales(salesArray)
-    setPaidBillsList(paidArray)
-    setSaleItemsMap(itemsBySale)
-    setSaleInstallmentsMap(installmentsBySale)
-    setPaymentMethods(methodsFormatted)
-    setTopProducts(topProductsList)
-    setTopServices(topServicesList)
-    setLowStockList(lowStock.slice(0, 10))
-    setStaleProducts(stale.slice(0, 10))
-    setMonthlyRevenue(monthlyChartData)
-    setStats({
-      totalSales: salesArray.length,
-      grossRevenue: grossRevenue,
-      totalCost: totalCost,
-      grossProfit: grossProfit,
-      fees: fees,
-      taxes: taxes,
-      expensesPaid: expensesPaid,
-      netProfit: netProfit,
-      netMargin: netMargin
-    })
-    setLoading(false)
+      const expensesPaid = paidArray.reduce((sum, b) => sum + (b.amount || 0), 0)
+      const netProfit = grossProfit - fees - taxes - expensesPaid
+      const netMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0
+
+      const lowStock = productsArray.filter(p => p.quantity <= (p.min_stock || 5))
+      const sixMonthsAgo = subMonths(new Date(), 6)
+      const stale = productsArray.filter(p => !p.last_sold_at || new Date(p.last_sold_at) < sixMonthsAgo)
+
+      const monthlyData = {}
+      salesArray.forEach(sale => {
+        const month = format(new Date(sale.created_at), 'MMM/yy')
+        monthlyData[month] = (monthlyData[month] || 0) + (sale.total_amount || 0)
+      })
+      const monthlyChartData = Object.entries(monthlyData).map(([month, total]) => ({ month, total }))
+
+      const methods = {}
+      salesArray.forEach(sale => {
+        const method = sale.payment_method || 'outro'
+        methods[method] = (methods[method] || 0) + 1
+      })
+
+      const productCount = {}
+      const serviceCount = {}
+      itemsArray.forEach(item => {
+        if (item.item_type === 'product') {
+          productCount[item.item_name] = (productCount[item.item_name] || 0) + (item.quantity || 0)
+        } else if (item.item_type === 'service') {
+          serviceCount[item.item_name] = (serviceCount[item.item_name] || 0) + (item.quantity || 0)
+        }
+      })
+
+      const topProductsList = Object.entries(productCount)
+        .map(([name, qtd]) => ({ name, quantity: qtd }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5)
+
+      const topServicesList = Object.entries(serviceCount)
+        .map(([name, qtd]) => ({ name, quantity: qtd }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5)
+
+      const methodLabels = {
+        cash: 'Dinheiro', pix: 'Pix', card_debit: 'Cartão Débito',
+        card_credit: 'Cartão Crédito', installment: 'Parcelado', outro: 'Outro'
+      }
+      const methodsFormatted = Object.entries(methods).map(([key, value]) => ({
+        method: methodLabels[key] || key, count: value
+      }))
+
+      const itemsBySale = itemsArray.reduce((acc, item) => {
+        const saleId = item.sale_id
+        if (!saleId) return acc
+        acc[saleId] = acc[saleId] || []
+        acc[saleId].push(item)
+        return acc
+      }, {})
+      Object.values(itemsBySale).forEach(list => list.sort((a, b) => (a.item_name || '').localeCompare(b.item_name || '')))
+
+      const installmentsBySale = installmentsArray.reduce((acc, inst) => {
+        const saleId = inst.sale_id
+        if (!saleId) return acc
+        acc[saleId] = acc[saleId] || []
+        acc[saleId].push(inst)
+        return acc
+      }, {})
+      Object.values(installmentsBySale).forEach(list => list.sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0)))
+
+      setSales(salesArray)
+      setPaidBillsList(paidArray)
+      setSaleItemsMap(itemsBySale)
+      setSaleInstallmentsMap(installmentsBySale)
+      setPaymentMethods(methodsFormatted)
+      setTopProducts(topProductsList)
+      setTopServices(topServicesList)
+      setLowStockList(lowStock.slice(0, 10))
+      setStaleProducts(stale.slice(0, 10))
+      setMonthlyRevenue(monthlyChartData)
+      setStats({
+        totalSales: salesArray.length,
+        grossRevenue: grossRevenue,
+        totalCost: totalCost,
+        grossProfit: grossProfit,
+        fees: fees,
+        taxes: taxes,
+        expensesPaid: expensesPaid,
+        netProfit: netProfit,
+        netMargin: netMargin
+      })
+    } catch (error) {
+      toast.error('Erro ao carregar relatórios: ' + (error?.message || error))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatCurrency = (value) => 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
@@ -269,6 +272,15 @@ const Reports = () => {
   const closeSaleDetails = () => {
     setSelectedSale(null)
   }
+
+  const selectedSaleItems = selectedSale ? saleItemsMap[selectedSale.id] || [] : []
+  const selectedSaleInstallments = selectedSale ? saleInstallmentsMap[selectedSale.id] || [] : []
+  const selectedSalePaid = selectedSaleInstallments.length > 0
+    ? selectedSaleInstallments.reduce((sum, inst) => sum + (inst.paid_amount || 0), 0)
+    : (selectedSale?.paid_amount || 0)
+  const selectedSalePending = selectedSaleInstallments.length > 0
+    ? selectedSaleInstallments.reduce((sum, inst) => sum + ((inst.amount || 0) - (inst.paid_amount || 0)), 0)
+    : Math.max((selectedSale?.total_amount || 0) - (selectedSale?.paid_amount || 0), 0)
 
   if (loading) return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando relatórios...</div>
 
@@ -499,7 +511,7 @@ const Reports = () => {
         </div>
       )}
 
-      {/* Modal Excluir Venda */}
+      {/* Modal Detalhes da Venda */}
       {selectedSale && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ background: '#1A1A1A', borderRadius: '12px', maxWidth: '520px', width: '100%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -508,8 +520,10 @@ const Reports = () => {
             <strong>Cliente:</strong> {selectedSale.customer_name || 'Não informado'}<br />
             <strong>Data:</strong> {format(new Date(selectedSale.created_at), 'dd/MM/yyyy HH:mm')}<br />
             <strong>Valor total:</strong> {formatCurrency(selectedSale.total_amount)}<br />
+            <strong>Total pago:</strong> {formatCurrency(selectedSalePaid)}<br />
+            <strong>Saldo restante:</strong> {formatCurrency(selectedSalePending)}<br />
             <strong>Status:</strong> {selectedSale.status === 'completed' ? 'Pago' : 'Pendente'}<br />
-            <strong>Pagamento:</strong> {selectedSale.payment_method === 'installment' ? `Parcelado (${selectedSale.installment_count}x)` : selectedSale.payment_method}</p>
+            <strong>Pagamento:</strong> {selectedSale.payment_method === 'installment' ? `Parcelado (${selectedSale.installment_count || 'N/A'}x)` : (selectedSale.payment_method || 'Não informado')}</p>
             <div style={{ background: '#121212', borderRadius: '12px', padding: '16px', marginTop: '16px' }}>
               <h3 style={{ color: '#D95A1A', marginBottom: '12px' }}>Itens Vendidos</h3>
               {(saleItemsMap[selectedSale.id] || []).length > 0 ? (

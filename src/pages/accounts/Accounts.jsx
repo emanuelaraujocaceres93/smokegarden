@@ -32,50 +32,60 @@ const Accounts = () => {
 
   const fetchData = async () => {
     setLoading(true)
-    
-    // Buscar vendas - valor recebido
-    const { data: sales } = await supabase.from('sales').select('paid_amount')
-    const totalReceived = (sales || []).reduce((sum, s) => sum + (s.paid_amount || 0), 0)
-    
-    // Buscar parcelas a receber do mês atual
-    const today = new Date()
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    const fromDate = firstDayOfMonth.toISOString().split('T')[0]
-    const toDate = lastDayOfMonth.toISOString().split('T')[0]
 
-    const { data: installments } = await supabase
-      .from('installments')
-      .select('*, sales(customer_name)')
-      .neq('status', 'paid')
-      .gte('due_date', fromDate)
-      .lte('due_date', toDate)
-      .order('due_date', { ascending: true })
-    
-    const totalToReceive = (installments || [])
-      .reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
-    
-    // Buscar contas a pagar do mês atual
-    const { data: bills } = await supabase
-      .from('bills_to_pay')
-      .select('*')
-      .eq('paid', false)
-      .gte('due_date', fromDate)
-      .lte('due_date', toDate)
-      .order('due_date', { ascending: true })
-    
-    const totalToPay = (bills || []).reduce((sum, b) => sum + b.amount, 0)
-    const balance = totalReceived - totalToPay
-    
-    setReceivables(installments || [])
-    setPayables(bills || [])
-    setStats({
-      totalReceived: totalReceived,
-      totalToReceive: totalToReceive,
-      totalToPay: totalToPay,
-      balance: balance
-    })
-    setLoading(false)
+    try {
+      const today = new Date()
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      const fromDate = firstDayOfMonth.toISOString().split('T')[0]
+      const toDate = lastDayOfMonth.toISOString().split('T')[0]
+
+      const { data: sales } = await supabase.from('sales').select('paid_amount, payment_method')
+      const nonInstallmentReceived = (sales || []).reduce((sum, sale) => {
+        return sum + ((sale.payment_method === 'installment') ? 0 : (sale.paid_amount || 0))
+      }, 0)
+
+      const { data: installments, error: installmentsError } = await supabase
+        .from('installments')
+        .select('*, sales(customer_name)')
+        .neq('status', 'paid')
+        .gte('due_date', fromDate)
+        .lte('due_date', toDate)
+        .order('due_date', { ascending: true })
+
+      if (installmentsError) throw installmentsError
+
+      const { data: allInstallments } = await supabase.from('installments').select('paid_amount')
+      const installmentReceived = (allInstallments || []).reduce((sum, inst) => sum + (inst.paid_amount || 0), 0)
+      const totalReceived = nonInstallmentReceived + installmentReceived
+      const totalToReceive = (installments || []).reduce((sum, i) => sum + ((i.amount || 0) - (i.paid_amount || 0)), 0)
+
+      const { data: bills, error: billsError } = await supabase
+        .from('bills_to_pay')
+        .select('*')
+        .eq('paid', false)
+        .gte('due_date', fromDate)
+        .lte('due_date', toDate)
+        .order('due_date', { ascending: true })
+
+      if (billsError) throw billsError
+
+      const totalToPay = (bills || []).reduce((sum, b) => sum + (b.amount || 0), 0)
+      const balance = totalReceived - totalToPay
+
+      setReceivables(installments || [])
+      setPayables(bills || [])
+      setStats({
+        totalReceived: totalReceived,
+        totalToReceive: totalToReceive,
+        totalToPay: totalToPay,
+        balance: balance
+      })
+    } catch (error) {
+      toast.error('Erro ao carregar dados: ' + (error?.message || error))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handlePayBill = async (bill) => {
