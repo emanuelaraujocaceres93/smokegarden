@@ -92,7 +92,24 @@ const Sales = () => {
 
   const getInstallmentValue = () => {
     const total = getTotal()
-    return installments > 1 ? total / installments : total
+    if (installments <= 1) return total
+    return Number((total / installments).toFixed(2))
+  }
+
+  const getInstallmentSchedule = (totalAmount) => {
+    if (installments <= 1) {
+      return [{ amount: totalAmount, dueInMonths: 0 }]
+    }
+
+    const base = Math.floor((totalAmount / installments) * 100) / 100
+    const remainder = Number((totalAmount - base * installments).toFixed(2))
+    return Array.from({ length: installments }, (_, index) => {
+      const isLast = index === installments - 1
+      return {
+        amount: Number((base + (isLast ? remainder : 0)).toFixed(2)),
+        dueInMonths: index
+      }
+    })
   }
 
   const finalizeSale = async () => {
@@ -158,20 +175,21 @@ const Sales = () => {
     }
 
     if (isInstallment) {
-      const installmentValue = getInstallmentValue()
-      for (let i = 1; i <= installments; i++) {
-        const dueDate = new Date()
-        dueDate.setMonth(dueDate.getMonth() + i)
-        
-        await supabase.from('installments').insert([{
+      const schedule = getInstallmentSchedule(total)
+      const installmentsPayload = schedule.map((item, index) => {
+        const due = new Date()
+        due.setMonth(due.getMonth() + item.dueInMonths)
+        return {
           sale_id: saleId,
-          installment_number: i,
-          due_date: dueDate.toISOString().split('T')[0],
-          amount: installmentValue,
-          paid_amount: i === 1 ? installmentValue : 0,
-          status: i === 1 ? 'paid' : 'pending'
-        }])
-      }
+          installment_number: index + 1,
+          due_date: due.toISOString().split('T')[0],
+          amount: item.amount,
+          paid_amount: index === 0 ? item.amount : 0,
+          status: index === 0 ? 'paid' : 'pending'
+        }
+      })
+
+      await supabase.from('installments').insert(installmentsPayload)
     }
 
     toast.success('Venda finalizada!')

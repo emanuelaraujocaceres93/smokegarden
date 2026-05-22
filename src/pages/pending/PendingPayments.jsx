@@ -37,7 +37,7 @@ const PendingPayments = () => {
     const { data: installments } = await supabase
       .from('installments')
       .select('*, sales(customer_name)')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'partial'])
       .order('due_date', { ascending: true })
     
     // Buscar contas a pagar
