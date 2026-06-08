@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react'
+import React from 'react';
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import Card from '../../components/ui/Card'
@@ -15,8 +16,8 @@ const Services = () => {
 
   async function fetchServices() {
     setLoading(true)
-    const { data } = await supabase.from('services').select('*').order('name')
-    setServices(data || [])
+    const { Data } = await supabase.from('services').select('*').order('name')
+    setServices(Data || [])
     setLoading(false)
   }
 
@@ -38,9 +39,9 @@ const Services = () => {
   }
 
   const handleDelete = async (id) => {
-    if (confirm('Excluir este serviço?')) {
+    if (confirm('excluir este serviço?')) {
       await supabase.from('services').delete().eq('id', id)
-      toast.success('Serviço excluído!')
+      toast.success('Serviço excluçdo!')
       fetchServices()
     }
   }
@@ -51,7 +52,7 @@ const Services = () => {
     <div className="p-4 md:p-6">
       <PageHeader 
         title="Serviços" 
-        description="Gerencie os serviços oferecidos"
+        description="Gerencie os Serviços oferecidos"
         actions={
           <button type="button" onClick={() => { setEditing(null); setForm({ name: '', description: '', price: '', estimated_hours: '' }); setShowModal(true) }}
             className="btn btn-primary btn-md">
@@ -75,8 +76,8 @@ const Services = () => {
                 </div>
                 <div className="service-card-actions">
                   <button type="button" onClick={() => { setEditing(s); setForm({ name: s.name, description: s.description || '', price: s.price, estimated_hours: s.estimated_hours || '' }); setShowModal(true) }} 
-                    className="btn btn-secondary btn-sm">Editar</button>
-                  <button type="button" onClick={() => handleDelete(s.id)} className="btn btn-danger btn-sm">Excluir</button>
+                    className="btn btn-secondary btn-sm">editar</button>
+                  <button type="button" onClick={() => handleDelete(s.id)} className="btn btn-danger btn-sm">excluir</button>
                 </div>
               </div>
             </div>
@@ -88,11 +89,11 @@ const Services = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-carbon rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
-            <h2 className="text-xl font-bold text-burnt mb-4">{editing ? 'Editar Serviço' : 'Novo Serviço'}</h2>
+            <h2 className="text-xl font-bold text-burnt mb-4">{editing ? 'editar Serviço' : 'Novo Serviço'}</h2>
             <form onSubmit={handleSubmit}>
               <input type="text" placeholder="Nome *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} 
                 className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" required />
-              <textarea placeholder="Descrição" value={form.description} onChange={e => setForm({...form, description: e.target.value})} 
+              <textarea placeholder="Descriçço" value={form.description} onChange={e => setForm({...form, description: e.target.value})} 
                 className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" rows="2" />
               <input type="number" step="0.01" placeholder="Preço *" value={form.price} onChange={e => setForm({...form, price: e.target.value})} 
                 className="w-full p-2 rounded bg-smoke border border-gray-700 mb-3" required />
@@ -100,7 +101,7 @@ const Services = () => {
                 className="w-full p-2 rounded bg-smoke border border-gray-700 mb-4" />
               <div className="flex gap-3">
                 <button type="submit" className="flex-1 bg-garden text-white py-2 rounded-lg">{editing ? 'Atualizar' : 'Cadastrar'}</button>
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-gray-700 text-white py-2 rounded-lg">Cancelar</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-gray-700 text-white py-2 rounded-lg">cancelar</button>
               </div>
             </form>
           </div>

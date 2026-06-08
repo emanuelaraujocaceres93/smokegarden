@@ -1,4 +1,4 @@
-﻿
+
 export default function Loading({ message = 'Carregando...' }) {
   return (
     <div className="loading-root">

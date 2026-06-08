@@ -1,4 +1,5 @@
-﻿import { useState } from 'react'
+import React from 'react';
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import Button from '../../components/ui/Button'
@@ -27,7 +28,7 @@ export default function Login() {
       <div className="card" style={{ maxWidth: 440, width: '100%' }}>
         <div className="card-header">
           <h2 className="card-title">Smoke Garden</h2>
-          <p className="page-description">Acesse o painel da mecânica com sua conta Supabase.</p>
+          <p className="page-description">Acesse o painel da mecçnica com sua conta Supabase.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -50,7 +51,7 @@ export default function Login() {
             required
           />
           <Button type="submit" variant="primary" size="lg" loading={loading} style={{ width: '100%' }}>
-            Entrar
+            entrar
           </Button>
         </form>
       </div>

@@ -1,8 +1,9 @@
-﻿
+import React from 'react';
+
 import { Children } from 'react'
 
-export default function Table({ headers = [], data = [], renderRow, emptyMessage = 'Nenhum registro encontrado.', className = '', children }) {
-  const hasRowRenderer = typeof renderRow === 'function' && Array.isArray(data)
+export default function Table({ headers = [], Data = [], renderRow, emptyMessage = 'Nenhum registro encontrado.', className = '', children }) {
+  const hasRowRenderer = typeof renderRow === 'function' && Array.isArray(Data)
   const hasChildren = Children.count(children) > 0
 
   return (
@@ -17,8 +18,8 @@ export default function Table({ headers = [], data = [], renderRow, emptyMessage
         </thead>
         <tbody>
           {hasRowRenderer ? (
-            data.length > 0 ? (
-              data.map((row, index) => renderRow(row, index))
+            Data.length > 0 ? (
+              Data.map((row, index) => renderRow(row, index))
             ) : (
               <tr>
                 <td colSpan={headers.length} style={{ padding: 18, color: 'rgba(224,224,224,.72)' }}>

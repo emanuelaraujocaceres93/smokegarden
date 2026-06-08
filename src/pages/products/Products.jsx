@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react'
+import React from 'react';
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/ui/PageHeader'
@@ -26,16 +27,16 @@ const Products = () => {
 
   async function fetchProducts() {
     setLoading(true)
-    const { data, error } = await supabase
+    const { Data, error } = await supabase
       .from('products')
       .select('*')
       .order('name')
     
     if (error) {
-      console.error('Erro ao buscar produtos:', error)
-      toast.error('Erro ao carregar produtos')
+      console.error('Erro ao buscar Produtos:', error)
+      toast.error('Erro ao carregar Produtos')
     } else {
-      setProducts(data || [])
+      setProducts(Data || [])
     }
     setLoading(false)
   }
@@ -61,7 +62,7 @@ const Products = () => {
         .update(productData)
         .eq('id', editingProduct.id)
       if (error) {
-        toast.error('Erro ao atualizar produto')
+        toast.error('Erro ao atualizar Produto')
       } else {
         toast.success('Produto atualizado com sucesso!')
       }
@@ -70,7 +71,7 @@ const Products = () => {
         .from('products')
         .insert([productData])
       if (error) {
-        toast.error('Erro ao cadastrar produto')
+        toast.error('Erro ao cadastrar Produto')
       } else {
         toast.success('Produto cadastrado com sucesso!')
       }
@@ -113,12 +114,12 @@ const Products = () => {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
+    if (window.confirm('Tem certeza que deseja excluir este Produto?')) {
       const { error } = await supabase.from('products').delete().eq('id', id)
       if (error) {
-        toast.error('Erro ao excluir produto')
+        toast.error('Erro ao excluir Produto')
       } else {
-        toast.success('Produto excluído com sucesso!')
+        toast.success('Produto excluçdo com sucesso!')
         fetchProducts()
       }
     }
@@ -140,7 +141,7 @@ const Products = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-grayLight">Carregando produtos...</div>
+        <div className="text-grayLight">Carregando Produtos...</div>
       </div>
     )
   }
@@ -149,7 +150,7 @@ const Products = () => {
     <div className="p-4 md:p-6">
       <PageHeader
         title="Produtos"
-        description="Gerencie o catálogo de produtos, preços, estoque e validade."
+        description="Gerencie o catçlogo de Produtos, preços, estoque e Validade."
         actions={
           <button
             type="button"
@@ -176,14 +177,14 @@ const Products = () => {
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque</th>
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque Mínimo</th>
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Validade</th>
-                <th className="py-3 px-4 text-left text-grayLight font-semibold">Ações</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold">Aççes</th>
               </tr>
             </thead>
             <tbody>
               {products.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="py-8 text-center text-grayLight">
-                    Nenhum produto cadastrado.
+                    Nenhum Produto cadastrado.
                   </td>
                 </tr>
               ) : (
@@ -233,7 +234,7 @@ const Products = () => {
                           {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
                         </span>
                       ) : (
-                        <span className="text-gray-500 text-xs">—</span>
+                        <span className="text-gray-500 text-xs">ç</span>
                       )}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
@@ -241,13 +242,13 @@ const Products = () => {
                         onClick={() => handleEdit(product)}
                         className="text-garden hover:text-green-400 mr-3 transition font-medium"
                       >
-                        Editar
+                        editar
                       </button>
                       <button
                         onClick={() => handleDelete(product.id)}
                         className="text-red-500 hover:text-red-400 transition font-medium"
                       >
-                        Excluir
+                        excluir
                       </button>
                     </td>
                   </tr>
@@ -258,10 +259,10 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Versão Mobile: Cards */}
+      {/* Versço Mobile: Cards */}
       <div className="cards-mobile-only">
         {products.length === 0 ? (
-          <div className="text-center text-grayLight py-8">Nenhum produto cadastrado.</div>
+          <div className="text-center text-grayLight py-8">Nenhum Produto cadastrado.</div>
         ) : (
           products.map((product) => (
             <div key={product.id} className="product-card-mobile">
@@ -299,21 +300,21 @@ const Products = () => {
                 </div>
               )}
               <div className="product-card-actions">
-                <button onClick={() => handleEdit(product)} className="text-garden hover:text-green-400">Editar</button>
-                <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-400">Excluir</button>
+                <button onClick={() => handleEdit(product)} className="text-garden hover:text-green-400">editar</button>
+                <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-400">excluir</button>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Modal de Cadastro/Edição */}
+      {/* Modal de Cadastro/Ediçço */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-carbon rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-700">
             <div className="p-6">
               <h2 className="text-xl font-bold text-burnt mb-4">
-                {editingProduct ? 'Editar Produto' : 'Novo Produto'}
+                {editingProduct ? 'editar Produto' : 'Novo Produto'}
               </h2>
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
@@ -328,7 +329,7 @@ const Products = () => {
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-grayLight text-sm mb-1">Descrição</label>
+                  <label className="block text-grayLight text-sm mb-1">Descriçço</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -390,7 +391,7 @@ const Products = () => {
                       onChange={(e) => setFormData({ ...formData, has_expiry: e.target.checked })}
                       className="w-4 h-4"
                     />
-                    <span className="text-grayLight text-sm">Produto tem validade</span>
+                    <span className="text-grayLight text-sm">Produto tem Validade</span>
                   </label>
                 </div>
                 
@@ -429,7 +430,7 @@ const Products = () => {
                     onClick={() => setShowModal(false)}
                     className="flex-1 bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600 transition font-medium"
                   >
-                    Cancelar
+                    cancelar
                   </button>
                 </div>
               </form>

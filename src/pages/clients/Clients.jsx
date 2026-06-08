@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react'
+import React from 'react';
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -20,15 +21,15 @@ const Clients = () => {
 
   async function fetchClients() {
     setLoading(true)
-    const { data, error } = await supabase
+    const { Data, error } = await supabase
       .from('clients')
       .select('*')
       .order('name')
     
     if (error) {
-      toast.error('Erro ao carregar clientes')
+      toast.error('Erro ao carregar Clientes')
     } else {
-      setClients(data || [])
+      setClients(Data || [])
     }
     setLoading(false)
   }
@@ -37,11 +38,11 @@ const Clients = () => {
     e.preventDefault()
     
     if (!formData.name.trim()) {
-      toast.error('Nome é obrigatório')
+      toast.error('Nome ç obrigatçrio')
       return
     }
     if (!formData.contact.trim()) {
-      toast.error('Contato é obrigatório')
+      toast.error('Contato ç obrigatçrio')
       return
     }
     
@@ -57,7 +58,7 @@ const Clients = () => {
         .update(clientData)
         .eq('id', editingClient.id)
       if (error) {
-        toast.error('Erro ao atualizar cliente')
+        toast.error('Erro ao atualizar Cliente')
       } else {
         toast.success('Cliente atualizado!')
       }
@@ -66,7 +67,7 @@ const Clients = () => {
         .from('clients')
         .insert([clientData])
       if (error) {
-        toast.error('Erro ao cadastrar cliente')
+        toast.error('Erro ao cadastrar Cliente')
       } else {
         toast.success('Cliente cadastrado!')
       }
@@ -93,12 +94,12 @@ const Clients = () => {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Excluir este cliente?')) {
+    if (window.confirm('excluir este Cliente?')) {
       const { error } = await supabase.from('clients').delete().eq('id', id)
       if (error) {
-        toast.error('Erro ao excluir cliente')
+        toast.error('Erro ao excluir Cliente')
       } else {
-        toast.success('Cliente excluído!')
+        toast.success('Cliente excluçdo!')
         fetchClients()
       }
     }
@@ -118,10 +119,10 @@ const Clients = () => {
       {/* Cabeçalho */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Clientes</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie seus clientes</p>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie seus Clientes</p>
       </div>
 
-      {/* Barra de ações */}
+      {/* Barra de aççes */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <input
           type="text"
@@ -157,10 +158,10 @@ const Clients = () => {
         </button>
       </div>
 
-      {/* Lista de clientes */}
+      {/* Lista de Clientes */}
       {filteredClients.length === 0 ? (
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '60px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF' }}>{searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}</p>
+          <p style={{ color: '#9CA3AF' }}>{searchTerm ? 'Nenhum Cliente encontrado' : 'Nenhum Cliente cadastrado'}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -180,8 +181,8 @@ const Clients = () => {
             >
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{client.name}</p>
-                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>📞 {client.contact}</p>
-                {client.address && <p style={{ color: '#9CA3AF', margin: 0, fontSize: '12px' }}>📍 {client.address}</p>}
+                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>?? {client.contact}</p>
+                {client.address && <p style={{ color: '#9CA3AF', margin: 0, fontSize: '12px' }}>?? {client.address}</p>}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -195,7 +196,7 @@ const Clients = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  Editar
+                  editar
                 </button>
                 <button
                   onClick={() => handleDelete(client.id)}
@@ -208,7 +209,7 @@ const Clients = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  Excluir
+                  excluir
                 </button>
               </div>
             </div>
@@ -229,7 +230,7 @@ const Clients = () => {
           padding: '16px'
         }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px' }}>
-            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingClient ? 'editar Cliente' : 'Novo Cliente'}</h2>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Nome *</label>
@@ -261,8 +262,8 @@ const Clients = () => {
                 />
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>salvar</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>cancelar</button>
               </div>
             </form>
           </div>

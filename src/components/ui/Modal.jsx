@@ -1,4 +1,5 @@
-﻿import { useEffect } from 'react'
+import React from 'react';
+import { useEffect } from 'react'
 
 export default function Modal({ isOpen, onClose, title, children, footer, size = 'md' }) {
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
             <h3 className="modal-title">{title}</h3>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar modal">
-            ×
+            ç
           </button>
         </div>
         <div className="modal-body">{children}</div>

@@ -1,4 +1,4 @@
-﻿
+
 const Card = ({ children, title, className = '', onClick }) => {
   return (
     <div className={`panel ${className}`} onClick={onClick}>

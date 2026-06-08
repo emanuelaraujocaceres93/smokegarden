@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react'
+import React from 'react';
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -17,7 +18,7 @@ const Suppliers = () => {
 
   const refreshSuppliers = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { Data, error } = await supabase
       .from('suppliers')
       .select('*')
       .order('name')
@@ -25,7 +26,7 @@ const Suppliers = () => {
     if (error) {
       toast.error('Erro ao carregar fornecedores')
     } else {
-      setSuppliers(data || [])
+      setSuppliers(Data || [])
     }
     setLoading(false)
   }
@@ -39,11 +40,11 @@ const Suppliers = () => {
     e.preventDefault()
     
     if (!formData.name.trim()) {
-      toast.error('Nome é obrigatório')
+      toast.error('Nome ç obrigatçrio')
       return
     }
     if (!formData.contact.trim()) {
-      toast.error('Contato é obrigatório')
+      toast.error('Contato ç obrigatçrio')
       return
     }
     
@@ -62,7 +63,7 @@ const Suppliers = () => {
       if (error) {
         toast.error('Erro ao atualizar fornecedor')
       } else {
-        toast.success('Fornecedor atualizado!')
+        toast.success('fornecedor atualizado!')
       }
     } else {
       const { error } = await supabase
@@ -71,7 +72,7 @@ const Suppliers = () => {
       if (error) {
         toast.error('Erro ao cadastrar fornecedor')
       } else {
-        toast.success('Fornecedor cadastrado!')
+        toast.success('fornecedor cadastrado!')
       }
     }
 
@@ -97,12 +98,12 @@ const Suppliers = () => {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Excluir este fornecedor?')) {
+    if (window.confirm('excluir este fornecedor?')) {
       const { error } = await supabase.from('suppliers').delete().eq('id', id)
       if (error) {
         toast.error('Erro ao excluir fornecedor')
       } else {
-        toast.success('Fornecedor excluído!')
+        toast.success('fornecedor excluçdo!')
         refreshSuppliers()
       }
     }
@@ -121,11 +122,11 @@ const Suppliers = () => {
     <div style={{ padding: '16px' }}>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Fornecedores</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>fornecedores</h1>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie seus fornecedores</p>
       </div>
 
-      {/* Barra de ações */}
+      {/* Barra de aççes */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <input
           type="text"
@@ -157,7 +158,7 @@ const Suppliers = () => {
             fontWeight: 'bold'
           }}
         >
-          + Novo Fornecedor
+          + Novo fornecedor
         </button>
       </div>
 
@@ -184,22 +185,22 @@ const Suppliers = () => {
             >
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{supplier.name}</p>
-                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>📞 {supplier.contact}</p>
-                {supplier.address && <p style={{ color: '#9CA3AF', margin: '0 0 4px 0', fontSize: '12px' }}>📍 {supplier.address}</p>}
-                {supplier.notes && <p style={{ color: '#F9A825', margin: '4px 0 0 0', fontSize: '12px', fontStyle: 'italic' }}>📝 {supplier.notes}</p>}
+                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>?? {supplier.contact}</p>
+                {supplier.address && <p style={{ color: '#9CA3AF', margin: '0 0 4px 0', fontSize: '12px' }}>?? {supplier.address}</p>}
+                {supplier.notes && <p style={{ color: '#F9A825', margin: '4px 0 0 0', fontSize: '12px', fontStyle: 'italic' }}>?? {supplier.notes}</p>}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => handleEdit(supplier)}
                   style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#3A5F40', color: 'white', cursor: 'pointer' }}
                 >
-                  Editar
+                  editar
                 </button>
                 <button
                   onClick={() => handleDelete(supplier.id)}
                   style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#C62828', color: 'white', cursor: 'pointer' }}
                 >
-                  Excluir
+                  excluir
                 </button>
               </div>
             </div>
@@ -211,7 +212,7 @@ const Suppliers = () => {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px' }}>
-            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingSupplier ? 'Editar Fornecedor' : 'Novo Fornecedor'}</h2>
+            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingSupplier ? 'editar fornecedor' : 'Novo fornecedor'}</h2>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Nome *</label>
@@ -226,12 +227,12 @@ const Suppliers = () => {
                 <textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} />
               </div>
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Observações (produtos fornecidos, etc)</label>
-                <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="3" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} placeholder="Ex: Fornece óleo 2 tempos, velas, filtros..." />
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Observaççes (Produtos fornecidos, etc)</label>
+                <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="3" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} placeholder="Ex: Fornece çleo 2 tempos, velas, filtros..." />
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>salvar</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>cancelar</button>
               </div>
             </form>
           </div>

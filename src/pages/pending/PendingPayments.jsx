@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from 'react'
+import React from 'react';
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { format, differenceInDays } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -32,20 +33,20 @@ const PendingPayments = () => {
   async function fetchData() {
     setLoading(true)
     
-    // Buscar parcelas a receber (clientes)
-    const { data: installments } = await supabase
+    // Buscar parcelas a receber (Clientes)
+    const { Data: installments } = await supabase
       .from('installments')
       .select('*, sales(customer_name)')
       .in('status', ['pending', 'partial'])
       .order('due_date', { ascending: true })
     
     // Buscar contas a pagar
-    const { data: bills } = await supabase
+    const { Data: bills } = await supabase
       .from('bills_to_pay')
       .select('*')
       .order('due_date', { ascending: true })
     
-    // Calcular estatísticas
+    // Calcular estatçsticas
     const totalToReceive = (installments || []).reduce((sum, i) => sum + (i.amount - (i.paid_amount || 0)), 0)
     const totalToPay = (bills || []).filter(b => b.status !== 'paid').reduce((sum, b) => sum + (b.amount - (b.paid_amount || 0)), 0)
     
@@ -143,12 +144,12 @@ const PendingPayments = () => {
   }
 
   const handleDeleteBill = async (id) => {
-    if (window.confirm('Excluir esta conta?')) {
+    if (window.confirm('excluir esta conta?')) {
       const { error } = await supabase.from('bills_to_pay').delete().eq('id', id)
       if (error) {
         toast.error('Erro ao excluir')
       } else {
-        toast.success('Conta excluída!')
+        toast.success('Conta excluçda!')
         fetchData()
       }
     }
@@ -177,13 +178,13 @@ const PendingPayments = () => {
 
   const categories = [
     { value: 'aluguel', label: 'Aluguel' },
-    { value: 'energia', label: 'Energia Elétrica' },
-    { value: 'agua', label: 'Água' },
+    { value: 'energia', label: 'Energia Elçtrica' },
+    { value: 'agua', label: 'çgua' },
     { value: 'internet', label: 'Internet/Telefone' },
-    { value: 'funcionarios', label: 'Funcionários' },
+    { value: 'funcionarios', label: 'Funcionçrios' },
     { value: 'impostos', label: 'Impostos' },
-    { value: 'fornecedores', label: 'Fornecedores' },
-    { value: 'manutencao', label: 'Manutenção' },
+    { value: 'fornecedores', label: 'fornecedores' },
+    { value: 'manutencao', label: 'Manutençço' },
     { value: 'outros', label: 'Outros' }
   ]
 
@@ -207,15 +208,15 @@ const PendingPayments = () => {
         marginBottom: '24px'
       }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 A Receber</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? A Receber</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#3A5F40' }}>{formatCurrency(stats.totalToReceive)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>📉 A Pagar</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? A Pagar</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.totalToPay)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Saldo</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? Saldo</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.balance >= 0 ? '#2E7D32' : '#C62828' }}>
             {formatCurrency(stats.balance)}
           </p>
@@ -237,7 +238,7 @@ const PendingPayments = () => {
             fontWeight: 'bold'
           }}
         >
-          💵 Contas a Receber
+          ?? Contas a Receber
         </button>
         <button
           onClick={() => setActiveTab('pagar')}
@@ -252,16 +253,16 @@ const PendingPayments = () => {
             fontWeight: 'bold'
           }}
         >
-          🧾 Contas a Pagar
+          ?? Contas a Pagar
         </button>
       </div>
 
-      {/* Conteúdo da aba Receber */}
+      {/* Conteçdo da aba Receber */}
       {activeTab === 'receber' && (
         <div>
           {receivables.length === 0 ? (
             <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: '#9CA3AF' }}>Nenhum pagamento pendente de clientes</p>
+              <p style={{ color: '#9CA3AF' }}>Nenhum pagamento pendente de Clientes</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -273,7 +274,7 @@ const PendingPayments = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
                         <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>Venda #{inst.sale_id?.slice(0, 8)}</p>
-                        <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0 0 4px 0' }}>Cliente: {sale?.customer_name || 'Não informado'}</p>
+                        <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0 0 4px 0' }}>Cliente: {sale?.customer_name || 'Nço informado'}</p>
                         <p style={{ color: '#D95A1A', fontSize: '14px', margin: '0' }}>Parcela {inst.installment_number}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -298,7 +299,7 @@ const PendingPayments = () => {
         </div>
       )}
 
-      {/* Conteúdo da aba Pagar */}
+      {/* Conteçdo da aba Pagar */}
       {activeTab === 'pagar' && (
         <div>
           <div style={{ marginBottom: '16px', textAlign: 'right' }}>
@@ -328,7 +329,7 @@ const PendingPayments = () => {
                       <div>
                         <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{bill.description}</p>
                         <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '0' }}>{categories.find(c => c.value === bill.category)?.label || bill.category}</p>
-                        {bill.notes && <p style={{ color: '#F9A825', fontSize: '11px', margin: '4px 0 0 0' }}>📝 {bill.notes}</p>}
+                        {bill.notes && <p style={{ color: '#F9A825', fontSize: '11px', margin: '4px 0 0 0' }}>?? {bill.notes}</p>}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#C62828', margin: '0' }}>{formatCurrency(bill.amount)}</p>
@@ -339,8 +340,8 @@ const PendingPayments = () => {
                     {bill.status !== 'paid' && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <button onClick={() => handlePayBill(bill)} style={{ flex: 1, padding: '8px', backgroundColor: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Pagar</button>
-                        <button onClick={() => { setEditingBill(bill); setFormData({ description: bill.description, amount: bill.amount, due_date: bill.due_date, category: bill.category, notes: bill.notes || '' }); setShowModal(true) }} style={{ padding: '8px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Editar</button>
-                        <button onClick={() => handleDeleteBill(bill.id)} style={{ padding: '8px', backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Excluir</button>
+                        <button onClick={() => { setEditingBill(bill); setFormData({ description: bill.description, amount: bill.amount, due_date: bill.due_date, category: bill.category, notes: bill.notes || '' }); setShowModal(true) }} style={{ padding: '8px', backgroundColor: '#D95A1A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>editar</button>
+                        <button onClick={() => handleDeleteBill(bill.id)} style={{ padding: '8px', backgroundColor: '#C62828', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>excluir</button>
                       </div>
                     )}
                   </div>
@@ -355,10 +356,10 @@ const PendingPayments = () => {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px' }}>
-            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingBill ? 'Editar Conta' : 'Nova Conta a Pagar'}</h2>
+            <h2 style={{ color: '#D95A1A', marginBottom: '20px' }}>{editingBill ? 'editar Conta' : 'Nova Conta a Pagar'}</h2>
             <form onSubmit={handleSubmitBill}>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Descrição *</label>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Descriçço *</label>
                 <input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0' }} required />
               </div>
               <div style={{ marginBottom: '12px' }}>
@@ -376,12 +377,12 @@ const PendingPayments = () => {
                 </select>
               </div>
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Observações</label>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>Observaççes</label>
                 <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} />
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Salvar</button>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#3A5F40', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>salvar</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #9CA3AF', color: '#9CA3AF', borderRadius: '8px', cursor: 'pointer' }}>cancelar</button>
               </div>
             </form>
           </div>

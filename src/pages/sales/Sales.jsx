@@ -1,19 +1,20 @@
-﻿import { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
-const Sales = () => {
-  const [products, setProducts] = useState([])
-  const [services, setServices] = useState([])
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
+
+export default function Sales() {
+  const [estoque, setEstoque] = useState([])
+  const [clientes, setClientes] = useState([])
   const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(true)
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('cash')
-  const [installments, setInstallments] = useState(1)
-  const [notes, setNotes] = useState('')
-  const [activeTab, setActiveTab] = useState('products')
+  const [clienteId, setClienteId] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('pix')
+  const [activeType, setActiveType] = useState('produto')
   const [searchTerm, setSearchTerm] = useState('')
+  const [insumo, setInsumo] = useState({ descricao: '', quantidade: 1, valor_unitario: '' })
 
   useEffect(() => {
     fetchData()
@@ -21,443 +22,175 @@ const Sales = () => {
 
   async function fetchData() {
     setLoading(true)
-    
-    const { data: productsData } = await supabase
-      .from('products')
-      .select('*')
-      .order('name')
-    
-    const { data: servicesData } = await supabase
-      .from('services')
-      .select('*')
-      .order('name')
-    
-    setProducts(productsData || [])
-    setServices(servicesData || [])
+    const [{ data: estoqueData, error: estoqueError }, { data: clientesData }] = await Promise.all([
+      supabase.from('estoque').select('*').eq('ativo', true).order('nome'),
+      supabase.from('pessoas').select('*').eq('tipo', 'cliente').order('nome')
+    ])
+
+    if (estoqueError) toast.error('Erro ao carregar estoque')
+    setEstoque(estoqueData || [])
+    setClientes(clientesData || [])
     setLoading(false)
   }
 
-      const addToCart = (item, type) => {
-    const price = type === 'product' ? item.sale_price : item.price
-    const purchasePrice = type === 'product' ? (item.purchase_price || 0) : 0
-    
-    if (type === 'product' && item.quantity <= 0) {
-      toast.error('Produto sem estoque!')
-      return
-    }
-    
-    const existingItem = cart.find(i => i.id === item.id && i.type === type)
-    
-    if (existingItem) {
-      setCart(cart.map(i => 
-        i.id === item.id && i.type === type 
-          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * price }
-          : i
+  const currentItems = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return estoque.filter((item) => {
+      const matchesType = item.tipo === activeType
+      return matchesType && (!term || item.nome.toLowerCase().includes(term))
+    })
+  }, [estoque, activeType, searchTerm])
+
+  const total = cart.reduce((sum, item) => sum + item.valor_total, 0)
+
+  function addToCart(item) {
+    const existing = cart.find((cartItem) => cartItem.estoque_id === item.id)
+    if (existing) {
+      setCart(cart.map((cartItem) =>
+        cartItem.estoque_id === item.id
+          ? { ...cartItem, quantidade: cartItem.quantidade + 1, valor_total: (cartItem.quantidade + 1) * cartItem.valor_unitario }
+          : cartItem
       ))
     } else {
       setCart([...cart, {
-        id: item.id,
-        type: type,
-        name: item.name,
-        price: price,
-        purchase_price: purchasePrice,
-        quantity: 1,
-        subtotal: price
+        tipo_item: item.tipo,
+        estoque_id: item.id,
+        descricao: item.nome,
+        quantidade: 1,
+        valor_unitario: Number(item.valor) || 0,
+        valor_total: Number(item.valor) || 0
       }])
     }
-    toast.success(`${item.name} adicionado!`)
   }
 
-  const removeFromCart = (id, type) => {
-    setCart(cart.filter(i => !(i.id === id && i.type === type)))
-    toast.success('Item removido')
-  }
-
-  const updateQuantity = (id, type, newQuantity) => {
-    if (newQuantity < 1) {
-      removeFromCart(id, type)
+  function updateQuantity(index, quantidade) {
+    if (quantidade <= 0) {
+      setCart(cart.filter((_, itemIndex) => itemIndex !== index))
       return
     }
-    
-    setCart(cart.map(i => 
-      i.id === id && i.type === type 
-        ? { ...i, quantity: newQuantity, subtotal: newQuantity * i.price }
-        : i
+    setCart(cart.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, quantidade, valor_total: quantidade * item.valor_unitario } : item
     ))
   }
 
-  const getTotal = () => {
-    return cart.reduce((sum, item) => sum + item.subtotal, 0)
+  function addInsumo() {
+    if (!insumo.descricao.trim()) return toast.error('Descreva o insumo')
+    const quantidade = Number(insumo.quantidade) || 1
+    const valorUnitario = Number(insumo.valor_unitario) || 0
+    setCart([...cart, {
+      tipo_item: 'insumo',
+      estoque_id: null,
+      descricao: insumo.descricao.trim(),
+      quantidade,
+      valor_unitario: valorUnitario,
+      valor_total: quantidade * valorUnitario
+    }])
+    setInsumo({ descricao: '', quantidade: 1, valor_unitario: '' })
   }
 
-  const getInstallmentValue = () => {
-    const total = getTotal()
-    if (installments <= 1) return total
-    return Number((total / installments).toFixed(2))
-  }
+  async function finalizeSale() {
+    if (cart.length === 0) return toast.error('Adicione itens ao carrinho')
 
-  const getInstallmentSchedule = (totalAmount) => {
-    if (installments <= 1) {
-      return [{ amount: totalAmount, dueInMonths: 0 }]
-    }
-
-    const base = Math.floor((totalAmount / installments) * 100) / 100
-    const remainder = Number((totalAmount - base * installments).toFixed(2))
-    return Array.from({ length: installments }, (_, index) => {
-      const isLast = index === installments - 1
-      return {
-        amount: Number((base + (isLast ? remainder : 0)).toFixed(2)),
-        dueInMonths: index
-      }
+    const { data: config } = await supabase.from('configuracoes').select('chave_pix').limit(1).maybeSingle()
+    const { data: pixPayload } = await supabase.rpc('gerar_qrcode_pix', {
+      valor: total,
+      chave_pix: config?.chave_pix || ''
     })
-  }
 
-  const finalizeSale = async () => {
-    if (cart.length === 0) {
-      toast.error('Adicione itens ao carrinho!')
-      return
-    }
-
-    const total = getTotal()
-    const isInstallment = paymentMethod === 'installment' && installments > 1
-    
-    const saleData = {
-      customer_name: customerName || null,
-      customer_phone: customerPhone || null,
-      total_amount: total,
-      paid_amount: isInstallment ? getInstallmentValue() : total,
-      payment_method: paymentMethod,
-      installment_count: isInstallment ? installments : 1,
-      status: isInstallment ? 'pending' : 'completed',
-      notes: notes || null,
-      created_at: new Date().toISOString()
-    }
-
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert([saleData])
+    const { data: venda, error: vendaError } = await supabase
+      .from('vendas')
+      .insert([{
+        cliente_id: clienteId || null,
+        valor_total: total,
+        forma_pagamento: paymentMethod,
+        status: 'concluida',
+        qrcode_pix: paymentMethod === 'pix' ? pixPayload : null
+      }])
       .select()
-    
-    if (saleError) {
-      toast.error('Erro: ' + saleError.message)
-      return
-    }
+      .single()
 
-    const saleId = sale[0].id
+    if (vendaError) return toast.error(vendaError.message)
 
-    for (const item of cart) {
-                  const itemData = {
-        sale_id: saleId,
-        item_type: item.type,
-        item_id: item.id,
-        item_name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        purchase_price: item.purchase_price || 0,
-        subtotal: item.subtotal
-      }
-      
-      await supabase.from('sale_items').insert([itemData])
-      
-      if (item.type === 'product') {
-        const { data: product } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.id)
-          .single()
-        
-        const newQuantity = (product?.quantity || 0) - item.quantity
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity, last_sold_at: new Date().toISOString() })
-          .eq('id', item.id)
-      }
-    }
-
-    if (isInstallment) {
-      const schedule = getInstallmentSchedule(total)
-      const installmentsPayload = schedule.map((item, index) => {
-        const due = new Date()
-        due.setMonth(due.getMonth() + item.dueInMonths)
-        return {
-          sale_id: saleId,
-          installment_number: index + 1,
-          due_date: due.toISOString().split('T')[0],
-          amount: item.amount,
-          paid_amount: index === 0 ? item.amount : 0,
-          status: index === 0 ? 'paid' : 'pending'
-        }
-      })
-
-      await supabase.from('installments').insert(installmentsPayload)
-    }
+    const itens = cart.map((item) => ({ ...item, venda_id: venda.id }))
+    const { error: itensError } = await supabase.from('itens_venda').insert(itens)
+    if (itensError) return toast.error(itensError.message)
 
     toast.success('Venda finalizada!')
     setCart([])
-    setCustomerName('')
-    setCustomerPhone('')
-    setNotes('')
-    setPaymentMethod('cash')
-    setInstallments(1)
-    fetchData()
+    setClienteId('')
+    setPaymentMethod('pix')
   }
 
-  const formatCurrency = (value) => {
-    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-  }
-
-  const getCurrentItems = () => {
-    const items = activeTab === 'products' ? products : services
-    if (!searchTerm) return items
-    return items.filter(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
-  }
-
-  const currentItems = getCurrentItems()
+  if (loading) return <div className="page-empty">Carregando vendas...</div>
 
   return (
-    <div style={{ padding: '16px' }}>
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: '16px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Vendas</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Selecione produtos ou serviços</p>
+    <div style={{ padding: 16 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="page-title">Vendas</h1>
+        <p className="page-description">Carrinho com produtos, serviços e insumos.</p>
       </div>
 
-      {/* Layout de 2 colunas no desktop, 1 coluna no mobile */}
-      <div style={{
-        display: 'flex',
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-        gap: '16px'
-      }}>
-        
-        {/* Coluna Esquerda: Produtos/Serviços */}
-        <div style={{
-          flex: window.innerWidth < 768 ? 'auto' : 1,
-          backgroundColor: '#1A1A1A',
-          borderRadius: '12px',
-          padding: '16px'
-        }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setActiveTab('products')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'products' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'products' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              📦 Produtos ({products.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('services')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'services' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'services' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              🔧 Serviços ({services.length})
-            </button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 460px)', gap: 16 }}>
+        <section className="panel">
+          <div className="actions-row" style={{ marginBottom: 16 }}>
+            <button className={`btn ${activeType === 'produto' ? 'btn-primary' : 'btn-secondary'} btn-md`} type="button" onClick={() => setActiveType('produto')}>Produtos</button>
+            <button className={`btn ${activeType === 'servico' ? 'btn-primary' : 'btn-secondary'} btn-md`} type="button" onClick={() => setActiveType('servico')}>Serviços</button>
           </div>
-
-          <input
-            type="text"
-            placeholder="Buscar por nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '8px',
-              border: '1px solid #3A5F40',
-              backgroundColor: '#2C2C2C',
-              color: '#E0E0E0',
-              marginBottom: '16px'
-            }}
-          />
-
-          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            {currentItems.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>
-                {searchTerm ? 'Nenhum resultado' : `Nenhum ${activeTab === 'products' ? 'produto' : 'serviço'} cadastrado`}
-              </p>
-            ) : (
-              currentItems.map(item => (
-                <div
-                  key={item.id}
-                  style={{
-                    backgroundColor: '#2C2C2C',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginBottom: '10px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}
-                >
-                  <div>
-                    <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                    <p style={{ color: '#D95A1A', fontSize: '14px', margin: '4px 0 0 0' }}>
-                      {formatCurrency(activeTab === 'products' ? item.sale_price : item.price)}
-                    </p>
-                    {activeTab === 'products' && (
-                      <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '4px 0 0 0' }}>
-                        Estoque: {item.quantity || 0}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => addToCart(item, activeTab === 'products' ? 'product' : 'service')}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: '#3A5F40',
-                      color: 'white',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              ))
-            )}
+          <input className="form-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." style={{ marginBottom: 16 }} />
+          <div className="modal-list" style={{ padding: 0 }}>
+            {currentItems.map((item) => (
+              <button key={item.id} className="product-button" type="button" onClick={() => addToCart(item)}>
+                <div><strong>{item.nome}</strong></div>
+                <small>{formatCurrency(item.valor)}</small>
+              </button>
+            ))}
+            {currentItems.length === 0 && <div className="page-empty">Nenhum item encontrado.</div>}
           </div>
-        </div>
+        </section>
 
-        {/* Coluna Direita: Carrinho */}
-        <div style={{
-          flex: window.innerWidth < 768 ? 'auto' : 0.8,
-          backgroundColor: '#1A1A1A',
-          borderRadius: '12px',
-          padding: '16px',
-          position: window.innerWidth < 768 ? 'static' : 'sticky',
-          top: '16px',
-          maxHeight: window.innerWidth < 768 ? 'auto' : '80vh',
-          overflowY: 'auto'
-        }}>
-          <h3 style={{ color: '#D95A1A', marginBottom: '16px' }}>🛒 Carrinho ({cart.length} itens)</h3>
-          
-          {cart.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>Carrinho vazio</p>
-          ) : (
-            <>
-              {cart.map(item => (
-                <div key={`${item.id}-${item.type}`} style={{ backgroundColor: '#2C2C2C', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                    <div>
-                      <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                      <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>{formatCurrency(item.price)}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#C62828', color: 'white', cursor: 'pointer' }}>-</button>
-                      <span style={{ minWidth: '25px', textAlign: 'center' }}>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#3A5F40', color: 'white', cursor: 'pointer' }}>+</button>
-                      <button onClick={() => removeFromCart(item.id, item.type)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: 'transparent', color: '#C62828', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  </div>
-                  <p style={{ textAlign: 'right', margin: '8px 0 0 0', color: '#3A5F40', fontSize: '12px' }}>Subtotal: {formatCurrency(item.subtotal)}</p>
-                </div>
-              ))}
+        <aside className="panel">
+          <h2 className="panel-title">Carrinho</h2>
+          <select className="form-select" value={clienteId} onChange={(e) => setClienteId(e.target.value)} style={{ marginBottom: 12 }}>
+            <option value="">Cliente avulso</option>
+            {clientes.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+          </select>
+          <select className="form-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ marginBottom: 16 }}>
+            <option value="pix">Pix</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="debito">Cartão débito</option>
+            <option value="credito">Cartão crédito</option>
+          </select>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '16px' }}>Total:</span>
-                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(getTotal())}</span>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Nome do cliente"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                />
-
-                <input
-                  type="text"
-                  placeholder="Telefone do cliente"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                />
-
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                >
-                  <option value="cash">Dinheiro</option>
-                  <option value="pix">Pix</option>
-                  <option value="card_debit">Cartão Débito</option>
-                  <option value="card_credit">Cartão Crédito</option>
-                  <option value="installment">Parcelado</option>
-                </select>
-
-                {paymentMethod === 'installment' && (
-                  <select
-                    value={installments}
-                    onChange={(e) => setInstallments(Number(e.target.value))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                  >
-                    {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                      <option key={n} value={n}>{n}x de {formatCurrency(getInstallmentValue())}</option>
-                    ))}
-                  </select>
-                )}
-
-                <textarea
-                  placeholder="Observações"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows="2"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '16px', resize: 'vertical' }}
-                />
-
-                <button
-                  onClick={finalizeSale}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#3A5F40',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Finalizar Venda
-                </button>
+          {cart.map((item, index) => (
+            <div key={`${item.tipo_item}-${item.estoque_id || index}`} className="product-card-mobile" style={{ marginBottom: 10 }}>
+              <strong>{item.descricao}</strong>
+              <div className="actions-row">
+                <input className="form-input" type="number" min="1" value={item.quantidade} onChange={(e) => updateQuantity(index, Number(e.target.value) || 1)} style={{ maxWidth: 92 }} />
+                <span>{formatCurrency(item.valor_total)}</span>
+                <button className="btn btn-danger btn-sm" type="button" onClick={() => updateQuantity(index, 0)}>Remover</button>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          ))}
+
+          <div className="card" style={{ marginTop: 16 }}>
+            <h3 className="panel-title">Insumo</h3>
+            <input className="form-input" value={insumo.descricao} onChange={(e) => setInsumo({ ...insumo, descricao: e.target.value })} placeholder="Descrição" style={{ marginBottom: 8 }} />
+            <div className="actions-row">
+              <input className="form-input" type="number" min="1" value={insumo.quantidade} onChange={(e) => setInsumo({ ...insumo, quantidade: e.target.value })} style={{ maxWidth: 92 }} />
+              <input className="form-input" type="number" step="0.01" min="0" value={insumo.valor_unitario} onChange={(e) => setInsumo({ ...insumo, valor_unitario: e.target.value })} placeholder="Valor" />
+              <button className="btn btn-secondary btn-sm" type="button" onClick={addInsumo}>Adicionar</button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, fontWeight: 800 }}>
+            <span>Total</span>
+            <span>{formatCurrency(total)}</span>
+          </div>
+          <button className="btn btn-primary btn-lg" type="button" onClick={finalizeSale} style={{ width: '100%', marginTop: 16 }}>
+            Finalizar venda
+          </button>
+        </aside>
       </div>
     </div>
   )
 }
-
-export default Sales
-
-
-
-

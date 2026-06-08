@@ -1,4 +1,5 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+import React from 'react';
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const CartContext = createContext(null)
@@ -87,7 +88,7 @@ export function CartProvider({ children }) {
     [cartItems]
   )
 
-  const getTotal = useCallback(() => totalAmount, [totalAmount])
+  const gettotal = useCallback(() => totalAmount, [totalAmount])
 
   return (
     <CartContext.Provider
@@ -99,7 +100,7 @@ export function CartProvider({ children }) {
         clearCart,
         totalItems,
         totalAmount,
-        getTotal
+        gettotal
       }}
     >
       {children}

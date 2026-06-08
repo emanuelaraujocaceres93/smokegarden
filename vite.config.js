@@ -26,6 +26,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Allow precaching files up to 5 MiB (default is 2 MiB)
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,ico,jpeg,jpg,png}'],
         runtimeCaching: [
           {

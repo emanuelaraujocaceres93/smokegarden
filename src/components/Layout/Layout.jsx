@@ -1,29 +1,28 @@
-﻿import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
   Clock3,
+  FileText,
   LayoutDashboard,
   LogOut,
   Menu,
   Package,
+  Settings,
   ShoppingCart,
-  Wrench,
-  Users,
-  Truck,
-  Settings
+  Users
 } from 'lucide-react'
 
 const navigation = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { key: 'products', label: 'Produtos', icon: Package, path: '/products' },
-  { key: 'services', label: 'Serviços', icon: Wrench, path: '/services' },
+  { key: 'estoque', label: 'Estoque', icon: Package, path: '/estoque' },
+  { key: 'orcamentos', label: 'Orcamentos', icon: FileText, path: '/orcamentos' },
+  { key: 'caixa', label: 'Caixa', icon: BarChart3, path: '/caixa' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
   { key: 'accounts', label: 'Contas', icon: Clock3, path: '/accounts' },
-  { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
-  { key: 'clients', label: 'Clientes', icon: Users, path: '/clients' },
-  { key: 'suppliers', label: 'Fornecedores', icon: Truck, path: '/suppliers' },
-  { key: 'settings', label: 'Configurações', icon: Settings, path: '/settings' }
+  { key: 'reports', label: 'Relatorios', icon: BarChart3, path: '/reports' },
+  { key: 'pessoas', label: 'Pessoas', icon: Users, path: '/pessoas' },
+  { key: 'settings', label: 'Configuracoes', icon: Settings, path: '/settings' }
 ]
 
 export default function Layout({ user, onLogout, children }) {
@@ -35,9 +34,7 @@ export default function Layout({ user, onLogout, children }) {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024
       setIsDesktop(desktop)
-      if (desktop) {
-        setIsSidebarOpen(true)
-      }
+      if (desktop) setIsSidebarOpen(true)
     }
 
     window.addEventListener('resize', handleResize)
@@ -48,10 +45,8 @@ export default function Layout({ user, onLogout, children }) {
     <div className="layout-shell">
       <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'} ${!isDesktop ? 'mobile' : ''}`}>
         <div className="layout-sidebar-header">
-          <div>
-            <h1>Smoke Garden</h1>
-            <p>Mecânica 2 Tempos</p>
-          </div>
+          <h1>Smoke Garden</h1>
+          <p>Mecanica 2 Tempos</p>
         </div>
 
         <nav className="sidebar-nav">
@@ -63,9 +58,7 @@ export default function Layout({ user, onLogout, children }) {
                 to={item.path}
                 className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
                 onClick={() => {
-                  if (!isDesktop) {
-                    setIsSidebarOpen(false)
-                  }
+                  if (!isDesktop) setIsSidebarOpen(false)
                 }}
               >
                 <Icon size={18} />
@@ -105,9 +98,7 @@ export default function Layout({ user, onLogout, children }) {
             <div className="badge badge-muted">{displayEmail}</div>
           </div>
         </header>
-        <main className="page-main">
-          {children}
-        </main>
+        <main className="page-main">{children}</main>
       </div>
     </div>
   )
