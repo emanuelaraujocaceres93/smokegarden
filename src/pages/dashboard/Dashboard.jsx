@@ -50,12 +50,10 @@ const Dashboard = () => {
         .select('*')
         .gte('created_at', firstDayOfMonth.toISOString())
       
-      // Buscar nomes dos clientes para as vendas recentes
       const recent = (sales || [])
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 5)
       
-      // Buscar nomes dos clientes da tabela pessoas
       const recentWithNames = await Promise.all(recent.map(async (sale) => {
         let clienteNome = 'Cliente avulso'
         
@@ -163,7 +161,7 @@ const Dashboard = () => {
         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
       }}
     >
-      {icon && <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>}
+      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
       <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>{label}</p>
       <p style={{ fontSize: '24px', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
     </div>
@@ -173,7 +171,7 @@ const Dashboard = () => {
     <div style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Dashboard</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Visão geral do negócio</p>
+        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Clique nos cards para navegar</p>
       </div>
 
       <div style={{
@@ -183,9 +181,9 @@ const Dashboard = () => {
         marginBottom: '32px'
       }}>
         <StatCard label="Vendas do Mês" value={formatCurrency(stats.totalSalesMonth)} color="#4ade80" onClick={() => handleCardClick('sales')} icon="💰" />
-        <StatCard label="Total Produtos" value={stats.totalProducts} color="#D95A1A" onClick={() => handleCardClick('products')} icon="📦" />
+        <StatCard label="Total de produtos" value={stats.totalProducts} color="#D95A1A" onClick={() => handleCardClick('products')} icon="📦" />
         <StatCard label="Total Serviços" value={stats.totalServices} color="#D95A1A" onClick={() => handleCardClick('services')} icon="🔧" />
-        <StatCard label="Estoque Baixo" value={stats.lowStockProducts} color="#fbbf24" onClick={() => handleCardClick('lowStock')} icon="⚠️" />
+        <StatCard label="Estoque baixo" value={stats.lowStockProducts} color="#fbbf24" onClick={() => handleCardClick('lowStock')} icon="⚠️" />
         <StatCard label="Pagamentos Pendentes" value={stats.pendingPayments} color="#f87171" onClick={() => handleCardClick('pending')} icon="📋" />
         <StatCard label="Produtos a Vencer" value={stats.productsExpiring} color="#fbbf24" onClick={() => handleCardClick('expiring')} icon="⏰" />
       </div>

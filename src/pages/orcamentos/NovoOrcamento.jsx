@@ -163,22 +163,25 @@ export default function NovoOrcamento() {
 
       if (error) throw error
 
-      // Inserir itens do orçamento
+      // Inserir itens do orçamento usando os campos corretos
       const itensData = itens.map((item) => ({
         orcamento_id: orcamento.id,
-        estoque_id: item.estoque_id,
-        tipo_item: item.tipo_item,
-        descricao: item.descricao,
+        produto_id: item.estoque_id,
+        produto_nome: item.descricao,
         quantidade: item.quantidade,
-        valor_unitario: item.valor_unitario,
-        valor_total: item.valor_total
+        preco_unitario: item.valor_unitario,
+        preco_total: item.valor_total,
+        created_at: new Date().toISOString()
       }))
 
       const { error: itensError } = await supabase.from('orcamento_itens').insert(itensData)
       if (itensError) throw itensError
 
       toast.success(`Orçamento #${novoNumero} criado com sucesso!`)
-      navigate('/orcamentos')
+      
+      // Navegar e forçar recarregamento da página de orçamentos
+      navigate('/orcamentos', { replace: true })
+      
     } catch (error) {
       console.error('Erro ao salvar:', error)
       toast.error(error.message || 'Erro ao salvar orçamento')

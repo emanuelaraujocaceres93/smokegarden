@@ -1,101 +1,211 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import { ShoppingBag, MapPin } from 'lucide-react';
+import { ShoppingBag, MapPin, Plus, Minus, Trash2, Star, StarHalf, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PublicMenu() {
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState(null);
-  const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
   const [cart, setCart] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
   const [showCart, setShowCart] = useState(false);
   const [clienteNome, setClienteNome] = useState('');
   const [clienteEmail, setClienteEmail] = useState('');
   const [clienteTelefone, setClienteTelefone] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Avaliações
+  const [avaliacoes, setAvaliacoes] = useState([]);
+  const [avaliacaoNota, setAvaliacaoNota] = useState(5);
+  const [avaliacaoNome, setAvaliacaoNome] = useState('');
+  const [avaliacaoComentario, setAvaliacaoComentario] = useState('');
+  const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
+  const [showAvaliacaoForm, setShowAvaliacaoForm] = useState(false);
+
+  const calcularTotalItens = (carrinho) => {
+    return carrinho.reduce((sum, item) => sum + (item.quantidade || 1), 0);
+  };
+
+  const forceRerender = () => setRefreshKey(prev => prev + 1);
+
+  // Carregar avaliações aprovadas
+  async function carregarAvaliacoes() {
+    const { data, error } = await supabase
+      .from('avaliacoes')
+      .select('*')
+      .eq('aprovado', true)
+      .order('created_at', { ascending: false })
+      .limit(6);
+    
+    if (!error && data) {
+      setAvaliacoes(data);
+    }
+  }
 
   useEffect(() => {
     carregarDados();
-    carregarCarrinho();
+    carregarAvaliacoes();
+    const cartSaved = localStorage.getItem('public_cart');
+    if (cartSaved) {
+      try {
+        const parsedCart = JSON.parse(cartSaved);
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+          setCartCount(calcularTotalItens(parsedCart));
+        }
+      } catch (e) {
+        console.error('Erro ao carregar carrinho:', e);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem('public_cart', JSON.stringify(cart));
+    } else {
+      localStorage.removeItem('public_cart');
+    }
+    setCartCount(calcularTotalItens(cart));
+  }, [cart]);
 
   async function carregarDados() {
     try {
-      // Carregar configurações da empresa
-      const { data: configData } = await supabase
+      const { data: configData, error: configError } = await supabase
         .from('configuracoes')
         .select('*')
         .limit(1)
         .single();
 
-      setEmpresa(configData);
+      if (configError && configError.code !== 'PGRST116') {
+        console.error('Erro ao carregar configurações:', configError);
+      }
 
-      // Carregar categorias
-      const { data: categoriasData } = await supabase
-        .from('categorias')
-        .select('*')
-        .order('nome');
+      setEmpresa(configData || {
+        endereco_loja: 'R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023',
+        whatsapp_admin: '5511999999999'
+      });
 
-      setCategorias(categoriasData || []);
-
-      // Carregar produtos
-      const { data: produtosData } = await supabase
+      const { data: produtosData, error: produtosError } = await supabase
         .from('estoque')
         .select('*')
         .eq('tipo', 'produto')
         .eq('ativo', true)
         .order('nome');
 
+      if (produtosError) {
+        console.error('Erro ao carregar produtos:', produtosError);
+      }
       setProdutos(produtosData || []);
 
-      // Carregar serviços
-      const { data: servicosData } = await supabase
+      const { data: servicosData, error: servicosError } = await supabase
         .from('estoque')
         .select('*')
         .eq('tipo', 'servico')
         .eq('ativo', true)
         .order('nome');
 
+      if (servicosError) {
+        console.error('Erro ao carregar serviços:', servicosError);
+      }
       setServicos(servicosData || []);
+      
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar os dados. Recarregue a página.');
     }
   }
 
-  function carregarCarrinho() {
-    const cartSaved = localStorage.getItem('public_cart');
-    if (cartSaved) {
-      setCart(JSON.parse(cartSaved));
+  async function enviarAvaliacao() {
+    if (!avaliacaoNome.trim()) {
+      toast.error('Por favor, informe seu nome');
+      return;
+    }
+    if (!avaliacaoComentario.trim()) {
+      toast.error('Por favor, escreva um comentário');
+      return;
+    }
+
+    setEnviandoAvaliacao(true);
+
+    try {
+      const { error } = await supabase
+        .from('avaliacoes')
+        .insert([{
+          nome_cliente: avaliacaoNome,
+          nota: avaliacaoNota,
+          comentario: avaliacaoComentario,
+          aprovado: false,
+          created_at: new Date().toISOString()
+        }]);
+
+      if (error) throw error;
+
+      toast.success('Avaliação enviada! Aguarde aprovação.');
+      setAvaliacaoNome('');
+      setAvaliacaoComentario('');
+      setAvaliacaoNota(5);
+      setShowAvaliacaoForm(false);
+      
+      // Recarregar avaliações
+      carregarAvaliacoes();
+      
+    } catch (error) {
+      console.error('Erro ao enviar avaliação:', error);
+      toast.error('Erro ao enviar avaliação. Tente novamente.');
+    } finally {
+      setEnviandoAvaliacao(false);
     }
   }
 
-  function salvarCarrinho(novoCart) {
-    setCart(novoCart);
-    localStorage.setItem('public_cart', JSON.stringify(novoCart));
+  function renderStars(nota) {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (i <= nota) {
+        stars.push(<Star key={i} size={16} fill="#FFD700" color="#FFD700" />);
+      } else {
+        stars.push(<Star key={i} size={16} color="#555" />);
+      }
+    }
+    return stars;
   }
 
   function adicionarAoCarrinho(item) {
-    const existing = cart.find(cartItem => cartItem.id === item.id);
-    if (existing) {
-      const updatedCart = cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantidade: cartItem.quantidade + 1 }
-          : cartItem
-      );
-      salvarCarrinho(updatedCart);
+    const existingIndex = cart.findIndex(cartItem => cartItem.id === item.id);
+    let novoCart;
+    
+    if (existingIndex !== -1) {
+      novoCart = [...cart];
+      novoCart[existingIndex] = {
+        ...novoCart[existingIndex],
+        quantidade: (novoCart[existingIndex].quantidade || 1) + 1
+      };
     } else {
-      salvarCarrinho([...cart, { ...item, quantidade: 1 }]);
+      novoCart = [...cart, { ...item, quantidade: 1 }];
     }
-    toast.success(`${item.nome} adicionado ao carrinho!`);
+    
+    const novoTotal = calcularTotalItens(novoCart);
+    
+    setCart(novoCart);
+    setCartCount(novoTotal);
+    forceRerender();
+    
+    toast.success(`${item.nome} adicionado ao carrinho! (Total: ${novoTotal} itens)`, {
+      duration: 1500,
+      position: 'bottom-center'
+    });
   }
 
   function removerDoCarrinho(itemId) {
-    const updatedCart = cart.filter(item => item.id !== itemId);
-    salvarCarrinho(updatedCart);
+    const novoCart = cart.filter(item => item.id !== itemId);
+    const novoTotal = calcularTotalItens(novoCart);
+    setCart(novoCart);
+    setCartCount(novoTotal);
+    forceRerender();
     toast.success('Item removido do carrinho');
   }
 
@@ -104,13 +214,16 @@ export default function PublicMenu() {
       removerDoCarrinho(itemId);
       return;
     }
-    const updatedCart = cart.map(item =>
-      item.id === itemId ? { ...item, quantidade } : item
+    const novoCart = cart.map(item =>
+      item.id === itemId ? { ...item, quantidade: quantidade } : item
     );
-    salvarCarrinho(updatedCart);
+    const novoTotal = calcularTotalItens(novoCart);
+    setCart(novoCart);
+    setCartCount(novoTotal);
+    forceRerender();
   }
 
-  const totalCarrinho = cart.reduce((sum, item) => sum + (item.valor * item.quantidade), 0);
+  const totalCarrinho = cart.reduce((sum, item) => sum + (item.valor * (item.quantidade || 1)), 0);
 
   async function enviarPedido() {
     if (!clienteNome.trim()) {
@@ -125,7 +238,6 @@ export default function PublicMenu() {
     setEnviando(true);
 
     try {
-      // Buscar o número do WhatsApp das configurações (usando whatsapp_admin)
       let whatsappNumber = "5511999999999";
       let enderecoLoja = "R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023";
       
@@ -144,17 +256,14 @@ export default function PublicMenu() {
         }
       }
 
-      // Formatar o número (remover caracteres não numéricos)
       const numeroLimpo = whatsappNumber.replace(/\D/g, '');
       
-      // Validar número
       if (!numeroLimpo || numeroLimpo.length < 10) {
         toast.error('Número de WhatsApp não configurado corretamente');
         setEnviando(false);
         return;
       }
 
-      // Montar a mensagem do pedido
       let mensagem = `🍃 *SMOKE GARDEN* 🍃\n`;
       mensagem += `*Mecânica Especializada 2 Tempos*\n\n`;
       mensagem += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -169,9 +278,9 @@ export default function PublicMenu() {
       
       cart.forEach((item, index) => {
         mensagem += `${index + 1}️⃣ *${item.nome}*\n`;
-        mensagem += `   📦 Quantidade: ${item.quantidade}\n`;
+        mensagem += `   📦 Quantidade: ${item.quantidade || 1}\n`;
         mensagem += `   💰 Valor unitário: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}\n`;
-        mensagem += `   📊 Subtotal: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor * item.quantidade)}\n\n`;
+        mensagem += `   📊 Subtotal: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor * (item.quantidade || 1))}\n\n`;
       });
       
       mensagem += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -180,16 +289,11 @@ export default function PublicMenu() {
       mensagem += `📍 *Retirar em:*\n${enderecoLoja}\n\n`;
       mensagem += `💬 *Mensagem automática - Por favor, responder o cliente o mais breve possível*`;
 
-      // Codificar a mensagem para URL
       const mensagemCodificada = encodeURIComponent(mensagem);
-      
-      // Criar link do WhatsApp
       const whatsappUrl = `https://wa.me/${numeroLimpo}?text=${mensagemCodificada}`;
       
-      // Abrir WhatsApp em nova aba
       window.open(whatsappUrl, '_blank');
       
-      // Salvar pedido no banco como backup
       try {
         await supabase
           .from('pedidos_publicos')
@@ -203,19 +307,21 @@ export default function PublicMenu() {
               id: item.id,
               nome: item.nome,
               valor: item.valor,
-              quantidade: item.quantidade
+              quantidade: item.quantidade || 1
             }))
           }]);
       } catch (dbError) {
-        console.log('Não foi possível salvar no banco, mas WhatsApp foi enviado');
+        console.log('Não foi possível salvar no banco');
       }
       
-      // Limpar carrinho e fechar modal
-      salvarCarrinho([]);
+      setCart([]);
+      setCartCount(0);
+      localStorage.removeItem('public_cart');
       setClienteNome('');
       setClienteEmail('');
       setClienteTelefone('');
       setShowCart(false);
+      forceRerender();
       
       toast.success('Pedido enviado para o WhatsApp com sucesso!');
       
@@ -228,14 +334,13 @@ export default function PublicMenu() {
   }
 
   const itensExibir = categoriaSelecionada === 'todos' 
-    ? [...produtos, ...servicos]
+    ? [...produtos, ...servicos].sort((a, b) => a.nome.localeCompare(b.nome))
     : categoriaSelecionada === 'produtos' 
       ? produtos 
       : servicos;
 
   return (
-    <div style={{ backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      {/* Header */}
+    <div key={refreshKey} style={{ backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
       <header style={{ backgroundColor: '#D95A1A', padding: '20px', textAlign: 'center' }}>
         <h1 style={{ color: 'white', fontSize: '28px', margin: 0 }}>Smoke Garden</h1>
         <p style={{ color: '#FFD700', margin: '5px 0 0' }}>Mecânica Especializada 2 Tempos</p>
@@ -247,7 +352,6 @@ export default function PublicMenu() {
         )}
       </header>
 
-      {/* Navegação */}
       <div style={{ backgroundColor: '#2a2a2a', padding: '10px', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
         <button
           onClick={() => setCategoriaSelecionada('todos')}
@@ -260,7 +364,7 @@ export default function PublicMenu() {
             cursor: 'pointer'
           }}
         >
-          Catálogo
+          📦 Todos
         </button>
         <button
           onClick={() => setCategoriaSelecionada('produtos')}
@@ -273,7 +377,7 @@ export default function PublicMenu() {
             cursor: 'pointer'
           }}
         >
-          Produtos
+          🛒 Produtos
         </button>
         <button
           onClick={() => setCategoriaSelecionada('servicos')}
@@ -286,7 +390,7 @@ export default function PublicMenu() {
             cursor: 'pointer'
           }}
         >
-          Serviços
+          🔧 Serviços
         </button>
         <button
           onClick={() => setShowCart(true)}
@@ -303,50 +407,200 @@ export default function PublicMenu() {
           }}
         >
           <ShoppingBag size={18} />
-          Carrinho ({cart.length})
+          🛒 Carrinho ({cartCount})
         </button>
       </div>
 
-      {/* Itens */}
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-          {itensExibir.map((item) => (
-            <div key={item.id} style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', overflow: 'hidden', border: '1px solid #333' }}>
-              {item.imagem_url && (
-                <img 
-                  src={item.imagem_url} 
-                  alt={item.nome}
-                  style={{ width: '100%', height: '180px', objectFit: 'cover' }}
-                  onError={(e) => e.target.style.display = 'none'}
-                />
-              )}
-              <div style={{ padding: '16px' }}>
-                <h3 style={{ color: 'white', fontSize: '18px', margin: '0 0 8px 0' }}>{item.nome}</h3>
-                {item.descricao && (
-                  <p style={{ color: '#aaa', fontSize: '14px', margin: '0 0 12px 0' }}>{item.descricao}</p>
+        {itensExibir.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px' }}>
+            <p style={{ color: '#aaa', fontSize: '18px' }}>Nenhum item encontrado no catálogo.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {itensExibir.map((item) => (
+              <div key={item.id} style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', overflow: 'hidden', border: '1px solid #333' }}>
+                {item.imagem_url && (
+                  <img 
+                    src={item.imagem_url} 
+                    alt={item.nome}
+                    style={{ width: '100%', height: '180px', objectFit: 'cover' }}
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#4ade80', fontSize: '20px', fontWeight: 'bold' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}
-                  </span>
-                  <button
-                    onClick={() => adicionarAoCarrinho(item)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#D95A1A',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    Pedir Orçamento
-                  </button>
+                <div style={{ padding: '16px' }}>
+                  <h3 style={{ color: 'white', fontSize: '18px', margin: '0 0 8px 0' }}>{item.nome}</h3>
+                  {item.descricao && (
+                    <p style={{ color: '#aaa', fontSize: '14px', margin: '0 0 12px 0' }}>{item.descricao}</p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#4ade80', fontSize: '20px', fontWeight: 'bold' }}>
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}
+                    </span>
+                    <button
+                      onClick={() => adicionarAoCarrinho(item)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#D95A1A',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🛒 Adicionar ao Carrinho
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Seção de Avaliações */}
+      <div style={{ backgroundColor: '#2a2a2a', marginTop: '40px', padding: '40px 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2 style={{ color: '#D95A1A', fontSize: '24px', textAlign: 'center', marginBottom: '30px' }}>
+            ⭐ Avaliações dos Clientes
+          </h2>
+
+          {avaliacoes.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+              {avaliacoes.map((avaliacao) => (
+                <div key={avaliacao.id} style={{ backgroundColor: '#333', borderRadius: '12px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    {renderStars(avaliacao.nota)}
+                  </div>
+                  <p style={{ color: '#ddd', fontSize: '14px', marginBottom: '10px' }}>"{avaliacao.comentario}"</p>
+                  <p style={{ color: '#D95A1A', fontWeight: 'bold', fontSize: '14px' }}>— {avaliacao.nome_cliente}</p>
+                  <p style={{ color: '#666', fontSize: '11px', marginTop: '8px' }}>
+                    {new Date(avaliacao.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <p style={{ textAlign: 'center', color: '#888', marginBottom: '30px' }}>
+              Seja o primeiro a avaliar nossa loja!
+            </p>
+          )}
+
+          {!showAvaliacaoForm ? (
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => setShowAvaliacaoForm(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#D95A1A',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '16px'
+                }}
+              >
+                ✍️ Deixe sua avaliação
+              </button>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#333', borderRadius: '12px', padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
+              <h3 style={{ color: 'white', marginBottom: '20px' }}>Deixe sua opinião</h3>
+              
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Seu nome *</label>
+                <input
+                  type="text"
+                  value={avaliacaoNome}
+                  onChange={(e) => setAvaliacaoNome(e.target.value)}
+                  placeholder="Digite seu nome"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #444',
+                    borderRadius: '8px',
+                    color: 'white'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Nota *</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[1, 2, 3, 4, 5].map((nota) => (
+                    <button
+                      key={nota}
+                      onClick={() => setAvaliacaoNota(nota)}
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: avaliacaoNota === nota ? '#D95A1A' : '#444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {nota} ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Comentário *</label>
+                <textarea
+                  value={avaliacaoComentario}
+                  onChange={(e) => setAvaliacaoComentario(e.target.value)}
+                  placeholder="Compartilhe sua experiência..."
+                  rows="4"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #444',
+                    borderRadius: '8px',
+                    color: 'white',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={enviarAvaliacao}
+                  disabled={enviandoAvaliacao}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: enviandoAvaliacao ? '#666' : '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: enviandoAvaliacao ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {enviandoAvaliacao ? 'Enviando...' : '📨 Enviar Avaliação'}
+                </button>
+                <button
+                  onClick={() => setShowAvaliacaoForm(false)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#555',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -358,7 +612,7 @@ export default function PublicMenu() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: 'rgba(0,0,0,0.9)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -374,12 +628,12 @@ export default function PublicMenu() {
             padding: '20px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: 'white', margin: 0 }}>Seu Carrinho</h2>
+              <h2 style={{ color: 'white', margin: 0 }}>🛒 Seu Carrinho ({cartCount})</h2>
               <button
                 onClick={() => setShowCart(false)}
                 style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
               >
-                Fechar
+                ✕ Fechar
               </button>
             </div>
 
@@ -389,26 +643,32 @@ export default function PublicMenu() {
               <>
                 {cart.map((item) => (
                   <div key={item.id} style={{ backgroundColor: '#333', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ flex: 1 }}>
                         <p style={{ color: 'white', fontWeight: 'bold', margin: 0 }}>{item.nome}</p>
                         <p style={{ color: '#4ade80', margin: '5px 0 0' }}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}
                         </p>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantidade}
-                          onChange={(e) => atualizarQuantidade(item.id, parseInt(e.target.value) || 1)}
-                          style={{ width: '60px', padding: '5px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: 'white', textAlign: 'center' }}
-                        />
+                        <button
+                          onClick={() => atualizarQuantidade(item.id, (item.quantidade || 1) - 1)}
+                          style={{ padding: '5px 10px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span style={{ color: 'white', minWidth: '30px', textAlign: 'center' }}>{item.quantidade || 1}</span>
+                        <button
+                          onClick={() => atualizarQuantidade(item.id, (item.quantidade || 1) + 1)}
+                          style={{ padding: '5px 10px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Plus size={14} />
+                        </button>
                         <button
                           onClick={() => removerDoCarrinho(item.id)}
                           style={{ padding: '5px 10px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                         >
-                          Remover
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -437,7 +697,7 @@ export default function PublicMenu() {
                   />
                   <input
                     type="tel"
-                    placeholder="Seu telefone"
+                    placeholder="WhatsApp para contato"
                     value={clienteTelefone}
                     onChange={(e) => setClienteTelefone(e.target.value)}
                     style={{ width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#333', color: 'white' }}
@@ -457,7 +717,7 @@ export default function PublicMenu() {
                       fontSize: '16px'
                     }}
                   >
-                    {enviando ? 'Enviando...' : '📱 Enviar Pedido via WhatsApp'}
+                    {enviando ? '📤 Enviando...' : '📱 Enviar Pedido via WhatsApp'}
                   </button>
                 </div>
               </>
@@ -466,10 +726,12 @@ export default function PublicMenu() {
         </div>
       )}
 
-      {/* Footer */}
       <footer style={{ backgroundColor: '#111', padding: '20px', textAlign: 'center', marginTop: '40px' }}>
         <p style={{ color: '#666', fontSize: '12px' }}>
           © {new Date().getFullYear()} Smoke Garden - Todos os direitos reservados
+        </p>
+        <p style={{ color: '#555', fontSize: '10px', marginTop: '10px' }}>
+          Retire seu pedido em nossa loja física
         </p>
       </footer>
     </div>

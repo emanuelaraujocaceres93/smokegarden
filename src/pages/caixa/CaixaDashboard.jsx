@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from "../../lib/supabaseClient";
 import toast from 'react-hot-toast';
 
 export default function CaixaDashboard() {
@@ -13,6 +13,7 @@ export default function CaixaDashboard() {
   const [stats, setStats] = useState({ totalEntradas: 0, saldo: 0 });
   const [filtroData, setFiltroData] = useState({ inicio: '', fim: '' });
   const [tipo, setTipo] = useState('todos');
+  const [excluindo, setExcluindo] = useState(null);
 
   useEffect(() => {
     fetchMovimentacoes();
@@ -28,8 +29,74 @@ export default function CaixaDashboard() {
       
       if (pessoa?.nome) return pessoa.nome;
     }
-    if (clienteNome) return clienteNome;
-    return 'Cliente não informado';
+    if (clienteNome && clienteNome !== 'Cliente') return clienteNome;
+    return 'Cliente avulso';
+  }
+
+  async function verificarTemItens(orcamentoId) {
+    const { data, error } = await supabase
+      .from('orcamento_itens')
+      .select('id')
+      .eq('orcamento_id', orcamentoId)
+      .limit(1);
+    
+    if (error) {
+      console.error('Erro ao verificar itens:', error);
+      return false;
+    }
+    return data && data.length > 0;
+  }
+
+  async function excluirMovimentacao(mov) {
+    const tipoItem = mov.tipo === 'orcamento' ? 'Orçamento' : 'Venda';
+    const confirmMsg = `Tem certeza que deseja excluir ${tipoItem} #${mov.numero}? Esta ação não pode ser desfeita.`;
+    
+    if (!window.confirm(confirmMsg)) return;
+    
+    setExcluindo(mov.id);
+    
+    try {
+      if (mov.tipo === 'orcamento') {
+        // Excluir itens do orçamento primeiro
+        await supabase
+          .from('orcamento_itens')
+          .delete()
+          .eq('orcamento_id', mov.id_origem);
+        
+        // Excluir o orçamento
+        const { error } = await supabase
+          .from('orcamentos')
+          .delete()
+          .eq('id', mov.id_origem);
+        
+        if (error) throw error;
+        toast.success(`Orçamento #${mov.numero} excluído com sucesso!`);
+      } else {
+        // Excluir itens da venda primeiro
+        await supabase
+          .from('venda_itens')
+          .delete()
+          .eq('venda_id', mov.id_origem);
+        
+        // Excluir a venda
+        const { error } = await supabase
+          .from('vendas')
+          .delete()
+          .eq('id', mov.id_origem);
+        
+        if (error) throw error;
+        toast.success(`Venda #${mov.numero} excluída com sucesso!`);
+      }
+      
+      // Recarregar a lista
+      await fetchMovimentacoes();
+      
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast.error('Erro ao excluir: ' + error.message);
+    } finally {
+      setExcluindo(null);
+    }
   }
 
   async function fetchMovimentacoes() {
@@ -38,33 +105,7 @@ export default function CaixaDashboard() {
       let todasMovimentacoes = [];
       let totalEntradas = 0;
 
-      // Buscar orçamentos aprovados
-      if (tipo === 'todos' || tipo === 'orcamentos') {
-        let queryOrcamentos = supabase
-          .from('orcamentos')
-          .select('*')
-          .eq('status', 'aprovado');
-
-        if (filtroData.inicio) queryOrcamentos = queryOrcamentos.gte('data_criacao', filtroData.inicio);
-        if (filtroData.fim) queryOrcamentos = queryOrcamentos.lte('data_criacao', filtroData.fim);
-
-        const { data: orcamentos, error: orcError } = await queryOrcamentos.order('data_criacao', { ascending: false });
-        if (!orcError && orcamentos) {
-          const orcamentosFormatados = await Promise.all(orcamentos.map(async (o) => ({
-            id: o.id,
-            tipo: 'orcamento',
-            data: o.data_criacao,
-            valor: o.total || 0,
-            cliente: await buscarNomeCliente(o.cliente_id, o.cliente_nome),
-            numero: o.numero_orcamento,
-            id_origem: o.id
-          })));
-          todasMovimentacoes = [...todasMovimentacoes, ...orcamentosFormatados];
-          totalEntradas += orcamentos.reduce((sum, o) => sum + (o.total || 0), 0);
-        }
-      }
-
-      // Buscar vendas concluídas
+      // Buscar TODAS as vendas concluídas
       if (tipo === 'todos' || tipo === 'vendas') {
         let queryVendas = supabase
           .from('vendas')
@@ -83,10 +124,42 @@ export default function CaixaDashboard() {
             valor: v.valor_total || v.total || 0,
             cliente: await buscarNomeCliente(v.cliente_id, v.cliente_nome),
             numero: v.numero_venda || v.id.slice(0, 8),
-            id_origem: v.id
+            id_origem: v.id,
+            temItens: true
           })));
           todasMovimentacoes = [...todasMovimentacoes, ...vendasFormatadas];
           totalEntradas += vendas.reduce((sum, v) => sum + (v.valor_total || v.total || 0), 0);
+        }
+      }
+
+      // Buscar TODOS os orçamentos aprovados
+      if (tipo === 'todos' || tipo === 'orcamentos') {
+        let queryOrcamentos = supabase
+          .from('orcamentos')
+          .select('*')
+          .eq('status', 'aprovado');
+
+        if (filtroData.inicio) queryOrcamentos = queryOrcamentos.gte('data_criacao', filtroData.inicio);
+        if (filtroData.fim) queryOrcamentos = queryOrcamentos.lte('data_criacao', filtroData.fim);
+
+        const { data: orcamentos, error: orcError } = await queryOrcamentos.order('data_criacao', { ascending: false });
+        if (!orcError && orcamentos) {
+          const orcamentosFormatados = await Promise.all(orcamentos.map(async (o) => {
+            const temItens = await verificarTemItens(o.id);
+            return {
+              id: o.id,
+              tipo: 'orcamento',
+              data: o.data_criacao || o.created_at,
+              valor: o.total || 0,
+              cliente: await buscarNomeCliente(o.cliente_id, o.cliente_nome),
+              numero: `ORC-${o.numero_orcamento}`,
+              id_origem: o.id,
+              temVenda: !!o.venda_id,
+              temItens: temItens
+            };
+          }));
+          todasMovimentacoes = [...todasMovimentacoes, ...orcamentosFormatados];
+          totalEntradas += orcamentos.reduce((sum, o) => sum + (o.total || 0), 0);
         }
       }
 
@@ -139,6 +212,10 @@ export default function CaixaDashboard() {
       aVal = Number(aVal) || 0;
       bVal = Number(bVal) || 0;
     }
+    if (sortField === 'data') {
+      aVal = new Date(aVal);
+      bVal = new Date(bVal);
+    }
     return sortDirection === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
   });
 
@@ -151,7 +228,7 @@ export default function CaixaDashboard() {
     if (mov.tipo === 'orcamento') {
       navigate(`/orcamentos/${mov.id_origem}`);
     } else {
-      navigate(`/vendas/${mov.id_origem}`);
+      navigate(`/sales/${mov.id_origem}`);
     }
   };
 
@@ -161,22 +238,22 @@ export default function CaixaDashboard() {
 
   return (
     <div style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h1 style={{ color: 'white', fontSize: '28px', margin: 0 }}>Caixa</h1>
-          <p style={{ color: '#888', margin: 0 }}>Controle financeiro - Orçamentos aprovados e Vendas</p>
+          <p style={{ color: '#888', margin: 0 }}>Controle financeiro - Vendas e Orçamentos aprovados</p>
         </div>
         <button onClick={fetchMovimentacoes} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>🔄 Atualizar</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
           <p style={{ color: '#aaa', margin: 0 }}>Total em Movimentações</p>
-          <p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold', margin: '10px 0 0 0' }}>{formatCurrency(stats.totalEntradas)}</p>
+          <p style={{ color: '#4ade80', fontSize: '28px', fontWeight: 'bold', margin: '10px 0 0 0' }}>{formatCurrency(stats.totalEntradas)}</p>
         </div>
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
           <p style={{ color: '#aaa', margin: 0 }}>Saldo em Caixa</p>
-          <p style={{ color: 'white', fontSize: '28px', fontWeight: 'bold', margin: '10px 0 0 0' }}>{formatCurrency(stats.saldo)}</p>
+          <p style={{ color: '#4ade80', fontSize: '28px', fontWeight: 'bold', margin: '10px 0 0 0' }}>{formatCurrency(stats.saldo)}</p>
         </div>
       </div>
 
@@ -186,8 +263,8 @@ export default function CaixaDashboard() {
             <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Tipo</label>
             <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={{ padding: '8px 16px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }}>
               <option value="todos">Todos</option>
-              <option value="orcamentos">Orçamentos</option>
-              <option value="vendas">Vendas</option>
+              <option value="orcamentos">Apenas Orçamentos</option>
+              <option value="vendas">Apenas Vendas</option>
             </select>
           </div>
         </div>
@@ -207,8 +284,8 @@ export default function CaixaDashboard() {
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', overflow: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead style={{ backgroundColor: '#333' }}>
             <tr>
               <th onClick={() => handleSort('tipo')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Tipo {getSortIcon('tipo')}</th>
@@ -216,28 +293,66 @@ export default function CaixaDashboard() {
               <th onClick={() => handleSort('cliente')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Cliente {getSortIcon('cliente')}</th>
               <th onClick={() => handleSort('valor')} style={{ padding: '12px', textAlign: 'right', color: '#aaa', cursor: 'pointer' }}>Valor {getSortIcon('valor')}</th>
               <th onClick={() => handleSort('data')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Data {getSortIcon('data')}</th>
-              <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Ação</th>
+              <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }} colSpan="2">Ações</th>
             </tr>
           </thead>
           <tbody>
             {movimentacoesOrdenadas.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td>
+                <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td>
               </tr>
             ) : (
               movimentacoesOrdenadas.map((m, index) => (
                 <tr key={m.id || index} style={{ borderBottom: '1px solid #333' }}>
                   <td style={{ padding: '12px' }}>
-                    <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', backgroundColor: m.tipo === 'orcamento' ? '#f59e0b20' : '#22c55e20', color: m.tipo === 'orcamento' ? '#fbbf24' : '#4ade80' }}>
-                      {m.tipo === 'orcamento' ? 'Orçamento' : 'Venda'}
+                    <span style={{ 
+                      padding: '4px 8px', 
+                      borderRadius: '12px', 
+                      fontSize: '11px', 
+                      backgroundColor: m.tipo === 'orcamento' ? '#f59e0b20' : '#22c55e20', 
+                      color: m.tipo === 'orcamento' ? '#fbbf24' : '#4ade80' 
+                    }}>
+                      {m.tipo === 'orcamento' ? (m.temItens ? '📋 Orçamento' : '📋 Orçamento (Sem Itens)') : '💰 Venda'}
                     </span>
-                  </td>
+                   </td>
                   <td style={{ padding: '12px', color: 'white' }}>#{m.numero}</td>
                   <td style={{ padding: '12px', color: 'white' }}>{m.cliente || '—'}</td>
                   <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(m.valor)}</td>
                   <td style={{ padding: '12px', color: '#aaa' }}>{formatDate(m.data)}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <button onClick={() => handleVerDetalhes(m)} style={{ padding: '4px 12px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Ver</button>
+                    <button 
+                      onClick={() => handleVerDetalhes(m)} 
+                      style={{ 
+                        padding: '6px 12px', 
+                        backgroundColor: '#2563eb', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        marginRight: '5px'
+                      }}
+                    >
+                      👁️ Ver
+                    </button>
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <button 
+                      onClick={() => excluirMovimentacao(m)} 
+                      disabled={excluindo === m.id}
+                      style={{ 
+                        padding: '6px 12px', 
+                        backgroundColor: '#dc2626', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        cursor: excluindo === m.id ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        opacity: excluindo === m.id ? 0.6 : 1
+                      }}
+                    >
+                      {excluindo === m.id ? '...' : '🗑️ Excluir'}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -246,7 +361,7 @@ export default function CaixaDashboard() {
           {movimentacoesOrdenadas.length > 0 && (
             <tfoot style={{ backgroundColor: '#333', borderTop: '2px solid #444' }}>
               <tr>
-                <td colSpan="3" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold' }}>Total:</td>
+                <td colSpan="4" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold' }}>Total Geral:</td>
                 <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(stats.totalEntradas)}</td>
                 <td colSpan="2"></td>
               </tr>

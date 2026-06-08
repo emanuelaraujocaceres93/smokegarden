@@ -17,6 +17,8 @@ import Reports from './pages/reports/Reports';
 import Settings from './pages/settings/Settings';
 import CaixaDashboard from './pages/caixa/CaixaDashboard';
 import QRCodePage from './pages/QRCodePage';
+import VendaDetalhes from './pages/VendaDetalhes';
+import Avaliacoes from './pages/avaliacoes/Avaliacoes';
 
 function AppContent() {
   const { user, loading, logout } = useAuth();
@@ -64,7 +66,9 @@ function AppContent() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/caixa" element={<CaixaDashboard />} />
         <Route path="/qrcode" element={<QRCodePage />} />
+        <Route path="/avaliacoes" element={<Avaliacoes />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/sales/:id" element={<VendaDetalhes />} />
       </Routes>
     </Layout>
   );
