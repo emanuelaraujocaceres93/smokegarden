@@ -1,0 +1,19 @@
+﻿{
+  "name": "Smoke Garden",
+  "short_name": "SmokeGarden",
+  "description": "Mecânica 2 Tempos",
+  "theme_color": "#D95A1A",
+  "background_color": "#2C2C2C",
+  "display": "standalone",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.jpeg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/"
+}
