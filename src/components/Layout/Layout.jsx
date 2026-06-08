@@ -10,19 +10,23 @@ import {
   Package,
   Settings,
   ShoppingCart,
-  Users
+  Users,
+  QrCode,
+  Star
 } from 'lucide-react'
 
 const navigation = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { key: 'estoque', label: 'Estoque', icon: Package, path: '/estoque' },
-  { key: 'orcamentos', label: 'Orcamentos', icon: FileText, path: '/orcamentos' },
+  { key: 'orcamentos', label: 'Orçamentos', icon: FileText, path: '/orcamentos' },
   { key: 'caixa', label: 'Caixa', icon: BarChart3, path: '/caixa' },
   { key: 'sales', label: 'Vendas', icon: ShoppingCart, path: '/sales' },
   { key: 'accounts', label: 'Contas', icon: Clock3, path: '/accounts' },
-  { key: 'reports', label: 'Relatorios', icon: BarChart3, path: '/reports' },
+  { key: 'reports', label: 'Relatórios', icon: BarChart3, path: '/reports' },
   { key: 'pessoas', label: 'Pessoas', icon: Users, path: '/pessoas' },
-  { key: 'settings', label: 'Configuracoes', icon: Settings, path: '/settings' }
+  { key: 'qrcode', label: 'QR Code', icon: QrCode, path: '/qrcode' },
+  { key: 'avaliacoes', label: 'Avaliações', icon: Star, path: '/avaliacoes' },
+  { key: 'settings', label: 'Configurações', icon: Settings, path: '/settings' }
 ]
 
 export default function Layout({ user, onLogout, children }) {
@@ -46,7 +50,7 @@ export default function Layout({ user, onLogout, children }) {
       <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'} ${!isDesktop ? 'mobile' : ''}`}>
         <div className="layout-sidebar-header">
           <h1>Smoke Garden</h1>
-          <p>Mecanica 2 Tempos</p>
+          <p>Mecânica 2 Tempos</p>
         </div>
 
         <nav className="sidebar-nav">
