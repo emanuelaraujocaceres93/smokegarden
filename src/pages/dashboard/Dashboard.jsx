@@ -161,7 +161,7 @@ const Dashboard = () => {
         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
       }}
     >
-      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
+      <div style={{ fontSize: '28px', marginBottom: '8px' }}>{icon}</div>
       <p style={{ color: '#9CA3AF', fontSize: '14px', marginBottom: '4px' }}>{label}</p>
       <p style={{ fontSize: '24px', fontWeight: 'bold', color: color, margin: 0 }}>{value}</p>
     </div>

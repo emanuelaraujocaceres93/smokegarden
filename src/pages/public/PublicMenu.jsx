@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import { ShoppingBag, MapPin, Plus, Minus, Trash2, Star, StarHalf, Send } from 'lucide-react';
+import { ShoppingBag, MapPin, Plus, Minus, Trash2, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PublicMenu() {
@@ -19,7 +19,6 @@ export default function PublicMenu() {
   const [enviando, setEnviando] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Avaliações
   const [avaliacoes, setAvaliacoes] = useState([]);
   const [avaliacaoNota, setAvaliacaoNota] = useState(5);
   const [avaliacaoNome, setAvaliacaoNome] = useState('');
@@ -33,7 +32,6 @@ export default function PublicMenu() {
 
   const forceRerender = () => setRefreshKey(prev => prev + 1);
 
-  // Carregar avaliações aprovadas
   async function carregarAvaliacoes() {
     const { data, error } = await supabase
       .from('avaliacoes')
@@ -151,7 +149,6 @@ export default function PublicMenu() {
       setAvaliacaoNota(5);
       setShowAvaliacaoForm(false);
       
-      // Recarregar avaliações
       carregarAvaliacoes();
       
     } catch (error) {
@@ -459,10 +456,9 @@ export default function PublicMenu() {
         )}
       </div>
 
-      {/* Seção de Avaliações */}
       <div style={{ backgroundColor: '#2a2a2a', marginTop: '40px', padding: '40px 20px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ color: '#D95A1A', fontSize: '24px', textAlign: 'center', marginBottom: '30px' }}>
+          <h2 style={{ color: '#D95A1A', fontSize: '28px', textAlign: 'center', marginBottom: '30px' }}>
             ⭐ Avaliações dos Clientes
           </h2>
 
@@ -604,7 +600,6 @@ export default function PublicMenu() {
         </div>
       </div>
 
-      {/* Modal do Carrinho */}
       {showCart && (
         <div style={{
           position: 'fixed',
