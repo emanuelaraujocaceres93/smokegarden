@@ -44,7 +44,6 @@ export default function Orcamentos() {
     setAprovando(orcamento.id)
     
     try {
-      // 1. Buscar itens do orçamento
       const { data: itensOrcamento, error: itensError } = await supabase
         .from('orcamento_itens')
         .select('*')
@@ -59,7 +58,6 @@ export default function Orcamentos() {
       
       console.log('Itens encontrados:', itensOrcamento?.length || 0)
       
-      // 2. Se não tem itens, apenas aprovar o orçamento sem criar venda
       if (!itensOrcamento || itensOrcamento.length === 0) {
         console.log('Orçamento sem itens - aprovando apenas o status')
         
@@ -83,13 +81,11 @@ export default function Orcamentos() {
         return
       }
       
-      // 3. Tem itens - confirmar aprovação
       if (!window.confirm(`Aprovar orçamento #${orcamento.numero_orcamento || orcamento.id?.slice(0, 8)}? Isso criará uma venda e atualizará o estoque.`)) {
         setAprovando(null)
         return
       }
       
-      // 4. Verificar estoque disponível
       for (const item of itensOrcamento) {
         if (item.produto_id) {
           const { data: produto, error: produtoError } = await supabase
@@ -112,10 +108,8 @@ export default function Orcamentos() {
         }
       }
       
-      // 5. Gerar número da venda
       const numeroVenda = `VENDA-${Date.now().toString(36).toUpperCase()}`
       
-      // 6. Criar a venda
       const { data: venda, error: vendaError } = await supabase
         .from('vendas')
         .insert([{
@@ -141,9 +135,7 @@ export default function Orcamentos() {
       
       console.log('Venda criada:', venda)
       
-      // 7. Criar itens da venda e atualizar estoque
       for (const item of itensOrcamento) {
-        // Inserir item da venda
         const { error: itemVendaError } = await supabase
           .from('venda_itens')
           .insert([{
@@ -161,7 +153,6 @@ export default function Orcamentos() {
           throw itemVendaError
         }
         
-        // Atualizar estoque
         if (item.produto_id) {
           const { data: produto } = await supabase
             .from('estoque')
@@ -182,7 +173,6 @@ export default function Orcamentos() {
         }
       }
       
-      // 8. Atualizar status do orçamento
       const { error: updateError } = await supabase
         .from('orcamentos')
         .update({ 
@@ -332,7 +322,7 @@ export default function Orcamentos() {
                       backgroundColor: orcamento.status === 'aprovado' ? '#22c55e20' : '#f59e0b20',
                       color: orcamento.status === 'aprovado' ? '#4ade80' : '#fbbf24'
                     }}>
-                      {orcamento.status === 'aprovado' ? '✓ Aprovado' : '📝 Rascunho'}
+                      {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
                     </span>
                   </td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
