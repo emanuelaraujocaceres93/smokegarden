@@ -10,7 +10,8 @@ import {
   Package,
   Settings,
   ShoppingCart,
-  Users
+  Users,
+  QrCode
 } from 'lucide-react'
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { key: 'accounts', label: 'Contas', icon: Clock3, path: '/accounts' },
   { key: 'reports', label: 'Relatorios', icon: BarChart3, path: '/reports' },
   { key: 'pessoas', label: 'Pessoas', icon: Users, path: '/pessoas' },
+  { key: 'qrcode', label: 'QR Code', icon: QrCode, path: '/qrcode' },
   { key: 'settings', label: 'Configuracoes', icon: Settings, path: '/settings' }
 ]
 
