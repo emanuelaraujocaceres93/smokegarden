@@ -1,4 +1,5 @@
-import { jsPDF } from 'jspdf'
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -15,11 +16,10 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
 
-    // Cabeçalho - Linha decorativa
+    // Cabeçalho
     doc.setFillColor(217, 90, 26)
     doc.rect(0, 0, pageWidth, 5, 'F')
     
-    // Logo texto
     doc.setFontSize(22)
     doc.setTextColor(217, 90, 26)
     doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
@@ -28,20 +28,18 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setTextColor(100, 100, 100)
     doc.text('Mecânica Especializada 2 Tempos', pageWidth / 2, 28, { align: 'center' })
     
-    // Site
     doc.setFontSize(9)
     doc.setTextColor(150, 150, 150)
     doc.text('smokegarden.vercel.app/public', pageWidth / 2, 35, { align: 'center' })
     
     y = 48
     
-    // Linha separadora
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
     doc.line(15, y, pageWidth - 15, y)
     y += 10
 
-    // Título do documento
+    // Título
     doc.setFillColor(217, 90, 26)
     doc.roundedRect(15, y - 4, pageWidth - 30, 12, 3, 3, 'F')
     doc.setTextColor(255, 255, 255)
@@ -91,122 +89,109 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       y += 8
     }
     
-    y += 8
+    y += 10
 
-    // Tabela de Itens
+    // Preparar itens para a tabela
     const itens = orcamento.itens || []
     
-    if (itens.length > 0) {
-      // Cabeçalho da tabela
-      doc.setFillColor(217, 90, 26)
-      doc.rect(15, y, pageWidth - 30, 10, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'bold')
+    const tableBody = itens.map(item => {
+      const nome = item.nome || item.produto_nome || item.descricao || item.nome_produto || 'Produto'
+      const qtd = item.quantidade || 1
+      const unitario = item.valor_unitario || item.preco_unitario || item.valor || 0
+      const total = item.valor_total || item.preco_total || (unitario * qtd) || 0
       
-      doc.text('DESCRIÇÃO', 20, y + 7)
-      doc.text('QTD', 110, y + 7)
-      doc.text('UNITÁRIO', 140, y + 7)
-      doc.text('TOTAL', 180, y + 7)
-      
-      y += 10
-      doc.setTextColor(60, 60, 60)
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      
-      let rowNum = 0
-      for (const item of itens) {
-        // Verificar se precisa de nova página
-        if (y > pageHeight - 50) {
-          doc.addPage()
-          y = 20
-          
-          // Recriar cabeçalho na nova página
-          doc.setFillColor(217, 90, 26)
-          doc.rect(15, y, pageWidth - 30, 10, 'F')
-          doc.setTextColor(255, 255, 255)
-          doc.text('DESCRIÇÃO', 20, y + 7)
-          doc.text('QTD', 110, y + 7)
-          doc.text('UNITÁRIO', 140, y + 7)
-          doc.text('TOTAL', 180, y + 7)
-          y += 10
-          doc.setTextColor(60, 60, 60)
-        }
-        
-        // Alternar cor de fundo das linhas
-        if (rowNum % 2 === 0) {
-          doc.setFillColor(250, 250, 250)
-          doc.rect(15, y - 4, pageWidth - 30, 8, 'F')
-        }
-        
-        const descricao = item.nome || item.produto_nome || item.descricao || '-'
-        const descricaoCurtada = descricao.length > 40 ? descricao.substring(0, 37) + '...' : descricao
-        doc.text(descricaoCurtada, 20, y + 2)
-        doc.text(String(item.quantidade || 1), 110, y + 2)
-        doc.text(formatCurrency(item.valor_unitario || item.preco_unitario || 0), 140, y + 2)
-        doc.text(formatCurrency(item.valor_total || item.preco_total || 0), 180, y + 2)
-        
-        y += 8
-        rowNum++
-      }
-      
-      y += 8
+      return [nome, qtd.toString(), formatCurrency(unitario), formatCurrency(total)]
+    })
+
+    if (tableBody.length === 0) {
+      tableBody.push(['Nenhum item adicionado', '-', '-', '-'])
     }
 
-    // Totais
-    doc.setDrawColor(200, 200, 200)
-    doc.line(15, y, pageWidth - 15, y)
-    y += 10
+    // Usar autoTable
+    autoTable(doc, {
+      startY: y,
+      head: [['DESCRIÇÃO', 'QTD', 'UNITÁRIO', 'TOTAL']],
+      body: tableBody,
+      margin: { left: 15, right: 15 },
+      theme: 'striped',
+      headStyles: {
+        fillColor: [217, 90, 26],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [60, 60, 60]
+      },
+      columnStyles: {
+        0: { cellWidth: 'auto', halign: 'left' },
+        1: { cellWidth: 25, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
+      },
+      alternateRowStyles: {
+        fillColor: [250, 250, 250]
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+
+    // Calcular totais
+    const subtotal = itens.reduce((sum, item) => {
+      const val = item.valor_total || item.preco_total || 
+                  (item.valor_unitario || item.preco_unitario || 0) * (item.quantidade || 1)
+      return sum + val
+    }, 0)
+    
+    const desconto = orcamento.desconto || 0
+    const total = (orcamento.total || subtotal) - desconto
 
     const totalX = pageWidth - 50
     
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text('Subtotal:', totalX - 35, y)
+    doc.text('Subtotal:', totalX - 35, finalY)
     doc.setTextColor(60, 60, 60)
-    doc.text(formatCurrency(orcamento.subtotal || 0), totalX, y)
-    y += 8
+    doc.text(formatCurrency(subtotal), totalX, finalY)
     
-    if (orcamento.desconto && orcamento.desconto > 0) {
+    let currentY = finalY + 8
+    
+    if (desconto > 0) {
       doc.setTextColor(100, 100, 100)
-      doc.text('Desconto:', totalX - 35, y)
+      doc.text('Desconto:', totalX - 35, currentY)
       doc.setTextColor(220, 38, 38)
-      const descontoText = orcamento.tipo_desconto === 'percentual' 
-        ? `${orcamento.desconto}%` 
-        : formatCurrency(orcamento.desconto)
-      doc.text(`- ${descontoText}`, totalX, y)
-      y += 8
+      const descontoText = orcamento.tipo_desconto === 'percentual' ? `${desconto}%` : formatCurrency(desconto)
+      doc.text(`- ${descontoText}`, totalX, currentY)
+      currentY += 8
     }
     
-    // Linha separadora antes do total
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
-    doc.line(totalX - 45, y - 3, pageWidth - 15, y - 3)
+    doc.line(totalX - 45, currentY - 3, pageWidth - 15, currentY - 3)
     
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(34, 197, 94)
-    doc.text('VALOR TOTAL:', totalX - 40, y + 2)
-    doc.text(formatCurrency(orcamento.total || 0), totalX, y + 2)
+    doc.text('VALOR TOTAL:', totalX - 40, currentY + 2)
+    doc.text(formatCurrency(total), totalX, currentY + 2)
     
-    y += 20
+    currentY += 20
 
-    // Observações
     if (orcamento.observacoes) {
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(60, 60, 60)
-      doc.text('Observações:', 15, y)
-      y += 6
+      doc.text('Observações:', 15, currentY)
+      currentY += 6
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       const splitObs = doc.splitTextToSize(orcamento.observacoes, pageWidth - 30)
-      doc.text(splitObs, 15, y)
-      y += splitObs.length * 5 + 5
+      doc.text(splitObs, 15, currentY)
     }
 
-    // Rodapé
     const footerY = pageHeight - 12
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
@@ -218,7 +203,6 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.text('Smoke Garden - Mecânica Especializada 2 Tempos', pageWidth / 2, footerY - 2, { align: 'center' })
     doc.text('Este documento é uma proposta comercial.', pageWidth / 2, footerY + 3, { align: 'center' })
 
-    // Salvar PDF
     const nomeArquivo = type === 'orcamento' 
       ? `orcamento_${orcamento.numero_orcamento || Date.now()}.pdf`
       : `venda_${orcamento.numero_venda || Date.now()}.pdf`
