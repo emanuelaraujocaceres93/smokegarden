@@ -61,16 +61,6 @@ export default function Settings() {
     
     setUploading(true)
     try {
-      // Verificar se o bucket existe, se não, criar
-      const { data: buckets } = await supabase.storage.listBuckets()
-      const bucketExists = buckets?.some(b => b.name === 'logos')
-      
-      if (!bucketExists) {
-        await supabase.storage.createBucket('logos', {
-          public: true
-        })
-      }
-      
       const fileExt = file.name.split('.').pop()
       const fileName = `logo-${Date.now()}.${fileExt}`
       
@@ -92,7 +82,11 @@ export default function Settings() {
       toast.success('Logo enviada com sucesso!')
     } catch (error) {
       console.error('Erro no upload:', error)
-      toast.error(error.message || 'Erro ao enviar logo')
+      if (error.message?.includes('bucket not found')) {
+        toast.error('Bucket de storage não configurado. Contate o administrador.')
+      } else {
+        toast.error(error.message || 'Erro ao enviar logo')
+      }
     } finally {
       setUploading(false)
     }
@@ -101,7 +95,6 @@ export default function Settings() {
   async function handleSubmit(event) {
     event.preventDefault()
     
-    // Validações
     if (!form.whatsapp_admin.trim()) {
       toast.error('WhatsApp Admin é obrigatório')
       return
@@ -133,7 +126,6 @@ export default function Settings() {
       let result
       
       if (configId) {
-        // Atualizar existente
         result = await supabase
           .from('configuracoes')
           .update(payload)
@@ -141,7 +133,6 @@ export default function Settings() {
           .select()
           .single()
       } else {
-        // Inserir novo
         payload.created_at = new Date().toISOString()
         result = await supabase
           .from('configuracoes')
@@ -157,8 +148,6 @@ export default function Settings() {
       }
       
       toast.success('Configurações salvas com sucesso!')
-      
-      // Recarregar para garantir dados atualizados
       await fetchConfig()
       
     } catch (error) {
@@ -191,7 +180,6 @@ export default function Settings() {
       />
 
       <form className="panel" onSubmit={handleSubmit} style={{ maxWidth: 820, margin: '0 auto' }}>
-        {/* WhatsApp Admin */}
         <div className="form-group">
           <label>WhatsApp Admin (com DDD) *</label>
           <input 
@@ -207,7 +195,6 @@ export default function Settings() {
           </small>
         </div>
 
-        {/* Endereço da Loja */}
         <div className="form-group">
           <label>Endereço da Loja *</label>
           <textarea 
@@ -223,7 +210,6 @@ export default function Settings() {
           </small>
         </div>
 
-        {/* Logo */}
         <div className="form-group">
           <label>Logo da Empresa</label>
           <div
@@ -275,7 +261,6 @@ export default function Settings() {
           />
         </div>
 
-        {/* Dados Bancários */}
         <div className="card" style={{ marginTop: '20px', padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
           <h2 className="panel-title" style={{ fontSize: '18px', marginBottom: '16px' }}>
             💰 Dados Bancários (QR Code PIX)
