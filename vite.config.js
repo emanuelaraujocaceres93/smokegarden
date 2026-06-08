@@ -1,42 +1,48 @@
-﻿import { defineConfig } from 'vite'
+﻿// frontend/vite.config.js
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-
-// Plugin PWA simplificado
-function simplePWA() {
-  return {
-    name: 'simple-pwa',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url === '/manifest.webmanifest') {
-          res.setHeader('Content-Type', 'application/manifest+json');
-          res.end(JSON.stringify({
-            name: 'Smoke Garden',
-            short_name: 'SmokeGarden',
-            theme_color: '#D95A1A',
-            background_color: '#000000',
-            display: 'standalone',
-            icons: [{ src: '/logo.jpeg', sizes: 'any', type: 'image/jpeg' }]
-          }));
-        }
-        next();
-      });
-    }
-  };
-}
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  plugins: [react(), simplePWA()],
-  server: {
-    port: 5173,
-    host: true
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['logo.jpeg', 'favicon.ico'],
+      manifest: {
+        name: 'Smoke Garden - Mecânica 2 Tempos',
+        short_name: 'Smoke Garden',
+        description: 'Sistema de gestão para mecânica especializada',
+        theme_color: '#D95A1A',
+        background_color: '#2C2C2C',
+        display: 'standalone',
+        orientation: 'portrait',
+        icons: [
+          {
+            src: '/logo.jpeg',
+            sizes: 'any',
+            type: 'image/jpeg',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,svg,ico,jpeg,jpg,png}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24
+              }
+            }
+          }
+        ]
       }
-    }
-  }
+    })
+  ]
 })

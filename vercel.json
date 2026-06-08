@@ -1,16 +1,12 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "https://ghwcmdfyfncfpcsguaqz.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdod2NtZGZ5Zm5jZnBjc2d1YXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjc4MDYsImV4cCI6MjA5NDgwMzgwNn0.tsxfz_-lClevfByZHeJxiFeOn2CpgFgKek7YOInMqBo"
-  }
+  ]
 }

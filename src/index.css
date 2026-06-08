@@ -1,0 +1,15 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #2C2C2C;
+  color: #E0E0E0;
+}
+
+button {
+  font: inherit;
+}
