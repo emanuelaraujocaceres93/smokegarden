@@ -184,7 +184,9 @@ export default function CaixaDashboard() {
           </thead>
           <tbody>
             {movimentacoesOrdenadas.length === 0 ? (
-              <td><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td></td>
+              <tr>
+                <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td>
+              </tr>
             ) : (
               movimentacoesOrdenadas.map((m, index) => (
                 <tr key={m.id || index}>
