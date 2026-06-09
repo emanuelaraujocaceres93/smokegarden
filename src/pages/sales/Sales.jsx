@@ -123,13 +123,9 @@ export default function Sales() {
     try {
       setLoading(true)
       
-      // Resolver cliente
       const cliente = await resolveCliente()
-
-      // Calcular total
       const totalVenda = cart.reduce((sum, item) => sum + item.valor_total, 0)
 
-      // Inserir venda - usando os campos corretos da tabela
       const { data: venda, error: vendaError } = await supabase
         .from('vendas')
         .insert([{
@@ -144,7 +140,6 @@ export default function Sales() {
 
       if (vendaError) throw vendaError
 
-      // Inserir itens da venda (se existir tabela venda_itens)
       if (cart.length > 0) {
         const itens = cart.map((item) => ({ 
           venda_id: venda.id, 
@@ -167,7 +162,6 @@ export default function Sales() {
       setNovoClienteEmail('')
       setNovoClienteTelefone('')
       
-      // Recarregar dados
       fetchData()
     } catch (error) {
       console.error('Erro:', error)
@@ -177,40 +171,66 @@ export default function Sales() {
     }
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '50px', color: '#ccc' }}>Carregando...</div>
+  if (loading) return <div className="loading-root"><div className="spinner"></div><p>Carregando...</p></div>
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ color: 'white', fontSize: '28px', margin: 0 }}>Vendas</h1>
-        <p style={{ color: '#888', margin: '5px 0 0' }}>Carrinho com produtos, serviços e insumos.</p>
+    <div className="sales-container">
+      <div className="sales-header">
+        <h1 className="sales-title">Vendas</h1>
+        <p className="sales-description">Carrinho com produtos, serviços e insumos.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '24px' }}>
+      <div className="sales-grid">
         {/* Esquerda - Produtos */}
-        <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', padding: '20px' }}>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <button onClick={() => setActiveType('produto')} style={{ padding: '8px 16px', backgroundColor: activeType === 'produto' ? '#2563eb' : '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Produtos</button>
-            <button onClick={() => setActiveType('servico')} style={{ padding: '8px 16px', backgroundColor: activeType === 'servico' ? '#2563eb' : '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Serviços</button>
+        <div className="sales-products-panel">
+          <div className="sales-type-buttons">
+            <button 
+              onClick={() => setActiveType('produto')} 
+              className={`sales-type-btn ${activeType === 'produto' ? 'active' : ''}`}
+            >
+              Produtos
+            </button>
+            <button 
+              onClick={() => setActiveType('servico')} 
+              className={`sales-type-btn ${activeType === 'servico' ? 'active' : ''}`}
+            >
+              Serviços
+            </button>
           </div>
-          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white', marginBottom: '16px' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            placeholder="Buscar..." 
+            className="sales-search-input"
+          />
+          
+          <div className="sales-items-list">
             {currentItems.map((item) => (
-              <button key={item.id} onClick={() => addToCart(item)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-                <strong style={{ color: 'white' }}>{item.nome}</strong>
-                <small style={{ color: '#4ade80' }}>{formatCurrency(item.valor)}</small>
+              <button 
+                key={item.id} 
+                onClick={() => addToCart(item)} 
+                className="sales-item-btn"
+              >
+                <strong>{item.nome}</strong>
+                <small>{formatCurrency(item.valor)}</small>
               </button>
             ))}
           </div>
         </div>
 
         {/* Direita - Carrinho */}
-        <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', padding: '20px' }}>
-          <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Carrinho</h2>
+        <div className="sales-cart-panel">
+          <h2 className="sales-cart-title">Carrinho</h2>
           
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Cliente existente</label>
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setNovoClienteNome('') }} style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }}>
+          <div className="sales-form-group">
+            <label>Cliente existente</label>
+            <select 
+              value={clienteId} 
+              onChange={(e) => { setClienteId(e.target.value); setNovoClienteNome('') }} 
+              className="sales-select"
+            >
               <option value="">Cliente avulso</option>
               {clientes.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
             </select>
@@ -218,24 +238,46 @@ export default function Sales() {
 
           {!clienteId && (
             <>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Novo cliente</label>
-                <input type="text" value={novoClienteNome} onChange={(e) => setNovoClienteNome(e.target.value)} placeholder="Nome" style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }} />
+              <div className="sales-form-group">
+                <label>Novo cliente</label>
+                <input 
+                  type="text" 
+                  value={novoClienteNome} 
+                  onChange={(e) => setNovoClienteNome(e.target.value)} 
+                  placeholder="Nome" 
+                  className="sales-input"
+                />
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Email</label>
-                <input type="email" value={novoClienteEmail} onChange={(e) => setNovoClienteEmail(e.target.value)} placeholder="email@exemplo.com" style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }} />
+              <div className="sales-form-group">
+                <label>Email</label>
+                <input 
+                  type="email" 
+                  value={novoClienteEmail} 
+                  onChange={(e) => setNovoClienteEmail(e.target.value)} 
+                  placeholder="email@exemplo.com" 
+                  className="sales-input"
+                />
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Telefone</label>
-                <input type="text" value={novoClienteTelefone} onChange={(e) => setNovoClienteTelefone(e.target.value)} placeholder="(11) 99999-9999" style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }} />
+              <div className="sales-form-group">
+                <label>Telefone</label>
+                <input 
+                  type="text" 
+                  value={novoClienteTelefone} 
+                  onChange={(e) => setNovoClienteTelefone(e.target.value)} 
+                  placeholder="(11) 99999-9999" 
+                  className="sales-input"
+                />
               </div>
             </>
           )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Forma de pagamento</label>
-            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }}>
+          <div className="sales-form-group">
+            <label>Forma de pagamento</label>
+            <select 
+              value={paymentMethod} 
+              onChange={(e) => setPaymentMethod(e.target.value)} 
+              className="sales-select"
+            >
               <option value="pix">Pix</option>
               <option value="dinheiro">Dinheiro</option>
               <option value="debito">Cartão débito</option>
@@ -244,41 +286,374 @@ export default function Sales() {
           </div>
 
           {/* Itens do carrinho */}
-          {cart.map((item, index) => (
-            <div key={index} style={{ backgroundColor: '#333', padding: '12px', borderRadius: '8px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ color: 'white' }}>{item.descricao}</strong>
-                <button onClick={() => updateQuantity(index, 0)} style={{ padding: '4px 8px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Remover</button>
+          <div className="sales-cart-items">
+            {cart.map((item, index) => (
+              <div key={index} className="sales-cart-item">
+                <div className="sales-cart-item-header">
+                  <strong>{item.descricao}</strong>
+                  <button onClick={() => updateQuantity(index, 0)} className="sales-remove-btn">Remover</button>
+                </div>
+                <div className="sales-cart-item-controls">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={item.quantidade} 
+                    onChange={(e) => updateQuantity(index, Number(e.target.value) || 1)} 
+                    className="sales-quantity-input"
+                  />
+                  <span className="sales-item-total">{formatCurrency(item.valor_total)}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <input type="number" min="1" value={item.quantidade} onChange={(e) => updateQuantity(index, Number(e.target.value) || 1)} style={{ width: '80px', padding: '4px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
-                <span style={{ color: '#4ade80' }}>{formatCurrency(item.valor_total)}</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* Insumo */}
-          <div style={{ backgroundColor: '#333', padding: '12px', borderRadius: '8px', marginTop: '16px' }}>
-            <h3 style={{ color: 'white', fontSize: '14px', marginBottom: '8px' }}>Insumo</h3>
-            <input type="text" value={insumo.descricao} onChange={(e) => setInsumo({ ...insumo, descricao: e.target.value })} placeholder="Descrição" style={{ width: '100%', padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '4px', color: 'white', marginBottom: '8px' }} />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input type="number" min="1" value={insumo.quantidade} onChange={(e) => setInsumo({ ...insumo, quantidade: e.target.value })} placeholder="Qtd" style={{ width: '60px', padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
-              <input type="number" step="0.01" value={insumo.valor_unitario} onChange={(e) => setInsumo({ ...insumo, valor_unitario: e.target.value })} placeholder="Valor" style={{ flex: 1, padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: '4px', color: 'white' }} />
-              <button onClick={addInsumo} style={{ padding: '6px 12px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>+</button>
+          <div className="sales-insumo-panel">
+            <h3>Insumo</h3>
+            <input 
+              type="text" 
+              value={insumo.descricao} 
+              onChange={(e) => setInsumo({ ...insumo, descricao: e.target.value })} 
+              placeholder="Descrição" 
+              className="sales-input"
+            />
+            <div className="sales-insumo-controls">
+              <input 
+                type="number" 
+                min="1" 
+                value={insumo.quantidade} 
+                onChange={(e) => setInsumo({ ...insumo, quantidade: e.target.value })} 
+                placeholder="Qtd" 
+                className="sales-insumo-qtd"
+              />
+              <input 
+                type="number" 
+                step="0.01" 
+                value={insumo.valor_unitario} 
+                onChange={(e) => setInsumo({ ...insumo, valor_unitario: e.target.value })} 
+                placeholder="Valor" 
+                className="sales-insumo-valor"
+              />
+              <button onClick={addInsumo} className="sales-insumo-add">+</button>
             </div>
           </div>
 
           {/* Total */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #444' }}>
-            <span style={{ color: 'white', fontWeight: 'bold' }}>Total</span>
-            <span style={{ color: '#4ade80', fontWeight: 'bold', fontSize: '20px' }}>{formatCurrency(total)}</span>
+          <div className="sales-total">
+            <span>Total</span>
+            <span>{formatCurrency(total)}</span>
           </div>
 
-          <button onClick={finalizeSale} disabled={loading} style={{ width: '100%', marginTop: '16px', padding: '12px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+          <button onClick={finalizeSale} disabled={loading} className="sales-finalize-btn">
             {loading ? 'Finalizando...' : 'Finalizar Venda'}
           </button>
         </div>
       </div>
+
+      <style jsx>{`
+        .sales-container {
+          padding: 24px;
+          background-color: #1a1a1a;
+          min-height: 100vh;
+        }
+
+        .sales-header {
+          margin-bottom: 24px;
+        }
+
+        .sales-title {
+          color: white;
+          font-size: 28px;
+          margin: 0;
+        }
+
+        .sales-description {
+          color: #888;
+          margin: 5px 0 0;
+        }
+
+        .sales-grid {
+          display: grid;
+          grid-template-columns: 1fr 400px;
+          gap: 24px;
+        }
+
+        .sales-products-panel {
+          background-color: #2a2a2a;
+          border-radius: 12px;
+          padding: 20px;
+        }
+
+        .sales-type-buttons {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .sales-type-btn {
+          padding: 8px 16px;
+          background-color: #333;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+
+        .sales-type-btn.active {
+          background-color: #2563eb;
+        }
+
+        .sales-search-input {
+          width: 100%;
+          padding: 8px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+          margin-bottom: 16px;
+        }
+
+        .sales-items-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .sales-item-btn {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          cursor: pointer;
+          width: 100%;
+          text-align: left;
+          color: white;
+        }
+
+        .sales-item-btn small {
+          color: #4ade80;
+        }
+
+        .sales-cart-panel {
+          background-color: #2a2a2a;
+          border-radius: 12px;
+          padding: 20px;
+        }
+
+        .sales-cart-title {
+          color: white;
+          font-size: 18px;
+          margin-bottom: 16px;
+        }
+
+        .sales-form-group {
+          margin-bottom: 16px;
+        }
+
+        .sales-form-group label {
+          color: #aaa;
+          display: block;
+          margin-bottom: 5px;
+        }
+
+        .sales-select, .sales-input {
+          width: 100%;
+          padding: 8px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+        }
+
+        .sales-cart-items {
+          margin-bottom: 16px;
+        }
+
+        .sales-cart-item {
+          background-color: #333;
+          padding: 12px;
+          border-radius: 8px;
+          margin-bottom: 8px;
+        }
+
+        .sales-cart-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .sales-cart-item-header strong {
+          color: white;
+        }
+
+        .sales-remove-btn {
+          padding: 4px 8px;
+          background-color: #dc2626;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .sales-cart-item-controls {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .sales-quantity-input {
+          width: 80px;
+          padding: 4px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-item-total {
+          color: #4ade80;
+        }
+
+        .sales-insumo-panel {
+          background-color: #333;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 16px;
+        }
+
+        .sales-insumo-panel h3 {
+          color: white;
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+
+        .sales-insumo-controls {
+          display: flex;
+          gap: 8px;
+        }
+
+        .sales-insumo-qtd {
+          width: 60px;
+          padding: 6px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-insumo-valor {
+          flex: 1;
+          padding: 6px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-insumo-add {
+          padding: 6px 12px;
+          background-color: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .sales-total {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #444;
+          font-weight: bold;
+        }
+
+        .sales-total span:first-child {
+          color: white;
+        }
+
+        .sales-total span:last-child {
+          color: #4ade80;
+          font-size: 20px;
+        }
+
+        .sales-finalize-btn {
+          width: 100%;
+          margin-top: 16px;
+          padding: 12px;
+          background-color: #22c55e;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        .sales-finalize-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+          .sales-container {
+            padding: 16px;
+          }
+
+          .sales-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .sales-title {
+            font-size: 24px;
+          }
+
+          .sales-products-panel,
+          .sales-cart-panel {
+            padding: 16px;
+          }
+
+          .sales-item-btn {
+            padding: 10px;
+          }
+
+          .sales-cart-item-header {
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .sales-insumo-controls {
+            flex-wrap: wrap;
+          }
+
+          .sales-insumo-qtd {
+            width: 80px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .sales-type-buttons {
+            flex-direction: column;
+          }
+
+          .sales-type-btn {
+            width: 100%;
+          }
+
+          .sales-cart-item-controls {
+            flex-wrap: wrap;
+          }
+
+          .sales-quantity-input {
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   )
 }
