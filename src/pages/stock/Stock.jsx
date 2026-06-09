@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/ui/PageHeader'
@@ -9,6 +9,7 @@ const emptyForm = {
   descricao: '',
   valor: '',
   imagens: '',
+  imagem_url: '',
   ativo: true
 }
 
@@ -16,6 +17,7 @@ const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
 
 export default function Stock() {
+  const fileInputRef = useRef(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -23,6 +25,7 @@ export default function Stock() {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('todos')
   const [form, setForm] = useState(emptyForm)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchItems()
@@ -62,9 +65,42 @@ export default function Stock() {
       descricao: item.descricao || '',
       valor: item.valor ?? '',
       imagens: Array.isArray(item.imagens) ? item.imagens.join('\n') : '',
+      imagem_url: item.imagem_url || '',
       ativo: item.ativo !== false
     })
     setShowModal(true)
+  }
+
+  async function uploadImagem(file) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione uma imagem válida (JPG, PNG, GIF)')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `produto-${Date.now()}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('produtos')
+        .upload(fileName, file, { upsert: true })
+      
+      if (uploadError) throw uploadError
+      
+      const { data: publicUrlData } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(fileName)
+      
+      setForm(prev => ({ ...prev, imagem_url: publicUrlData.publicUrl }))
+      toast.success('Imagem enviada com sucesso!')
+    } catch (error) {
+      console.error('Erro:', error)
+      toast.error(error.message || 'Erro ao enviar imagem')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function handleSubmit(event) {
@@ -82,17 +118,22 @@ export default function Stock() {
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       valor: Number(form.valor) || 0,
-      imagens,
-      ativo: form.ativo
+      imagens: imagens.length > 0 ? imagens : null,
+      imagem_url: form.imagem_url || null,
+      ativo: form.ativo,
+      updated_at: new Date().toISOString()
     }
 
-    const request = editing
-      ? supabase.from('estoque').update(payload).eq('id', editing.id)
-      : supabase.from('estoque').insert([payload])
+    let result
+    if (editing) {
+      result = await supabase.from('estoque').update(payload).eq('id', editing.id)
+    } else {
+      payload.created_at = new Date().toISOString()
+      result = await supabase.from('estoque').insert([payload])
+    }
 
-    const { error } = await request
-    if (error) {
-      toast.error(error.message)
+    if (result.error) {
+      toast.error(result.error.message)
       return
     }
 
@@ -136,6 +177,7 @@ export default function Stock() {
         <table className="table">
           <thead>
             <tr>
+              <th style={{ width: 60 }}>Imagem</th>
               <th>Nome</th>
               <th>Tipo</th>
               <th>Valor</th>
@@ -146,6 +188,19 @@ export default function Stock() {
           <tbody>
             {filteredItems.map((item) => (
               <tr key={item.id}>
+                <td>
+                  {item.imagem_url ? (
+                    <img 
+                      src={item.imagem_url} 
+                      alt={item.nome} 
+                      style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} 
+                    />
+                  ) : (
+                    <div style={{ width: 40, height: 40, backgroundColor: '#333', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                      📦
+                    </div>
+                  )}
+                </td>
                 <td>
                   <strong>{item.nome}</strong>
                   {item.descricao && <div className="text-muted">{item.descricao}</div>}
@@ -160,7 +215,7 @@ export default function Stock() {
               </tr>
             ))}
             {filteredItems.length === 0 && (
-              <tr><td colSpan="5" className="page-empty">Nenhum item encontrado.</td></tr>
+              <tr><td colSpan="6" className="page-empty">Nenhum item encontrado.</td></tr>
             )}
           </tbody>
         </table>
@@ -193,17 +248,65 @@ export default function Stock() {
                 <label>Valor *</label>
                 <input className="form-input" type="number" step="0.01" min="0" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />
               </div>
+              
+              {/* Campo de upload de imagem */}
               <div className="form-group">
-                <label>Imagens (uma URL por linha, máximo 5)</label>
-                <textarea className="form-textarea" rows="4" value={form.imagens} onChange={(e) => setForm({ ...form, imagens: e.target.value })} />
+                <label>Imagem do Produto</label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? 'Enviando...' : '📸 Escolher imagem'}
+                  </button>
+                  {form.imagem_url && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => setForm({ ...form, imagem_url: '' })}
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => uploadImagem(e.target.files?.[0])}
+                />
+                {form.imagem_url && (
+                  <div style={{ marginTop: '8px' }}>
+                    <img 
+                      src={form.imagem_url} 
+                      alt="Preview" 
+                      style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', objectFit: 'contain' }} 
+                    />
+                  </div>
+                )}
+                <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+                  A imagem será exibida no catálogo público
+                </small>
               </div>
+
+              <div className="form-group">
+                <label>URLs das imagens (uma por linha, máximo 5)</label>
+                <textarea className="form-textarea" rows="4" value={form.imagens} onChange={(e) => setForm({ ...form, imagens: e.target.value })} />
+                <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+                  URLs externas para imagens adicionais
+                </small>
+              </div>
+
               <label className="actions-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                 <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
                 Ativo no cardápio público
               </label>
               <div className="modal-footer" style={{ padding: 0, borderTop: 0 }}>
                 <button className="btn btn-secondary btn-md" type="button" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="btn btn-primary btn-md" type="submit">Salvar</button>
+                <button className="btn btn-primary btn-md" type="submit" disabled={uploading}>Salvar</button>
               </div>
             </form>
           </div>
