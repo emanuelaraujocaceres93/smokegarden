@@ -12,7 +12,8 @@ import {
   ShoppingCart,
   Users,
   QrCode,
-  Star
+  Star,
+  X
 } from 'lucide-react'
 
 const navigation = [
@@ -38,18 +39,60 @@ export default function Layout({ user, onLogout, children }) {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024
       setIsDesktop(desktop)
-      if (desktop) setIsSidebarOpen(true)
+      if (desktop) {
+        setIsSidebarOpen(true)
+      } else {
+        setIsSidebarOpen(false)
+      }
     }
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
+  }
+
+  const closeSidebar = () => {
+    if (!isDesktop) {
+      setIsSidebarOpen(false)
+    }
+  }
+
   return (
     <div className="layout-shell">
+      {/* Botão do menu mobile - fora do sidebar para sempre ficar visível */}
+      {!isDesktop && !isSidebarOpen && (
+        <button className="menu-toggle-btn" onClick={toggleSidebar}>
+          <Menu size={20} />
+          Menu
+        </button>
+      )}
+
+      {/* Sidebar */}
       <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'} ${!isDesktop ? 'mobile' : ''}`}>
         <div className="layout-sidebar-header">
-          <h1>Smoke Garden</h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1>Smoke Garden</h1>
+            {!isDesktop && (
+              <button 
+                onClick={closeSidebar}
+                style={{ 
+                  background: 'transparent', 
+                  border: 'none', 
+                  color: 'white', 
+                  cursor: 'pointer',
+                  padding: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={24} />
+              </button>
+            )}
+          </div>
           <p>Mecânica 2 Tempos</p>
         </div>
 
@@ -61,9 +104,7 @@ export default function Layout({ user, onLogout, children }) {
                 key={item.key}
                 to={item.path}
                 className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                onClick={() => {
-                  if (!isDesktop) setIsSidebarOpen(false)
-                }}
+                onClick={closeSidebar}
               >
                 <Icon size={18} />
                 {item.label}
@@ -84,8 +125,12 @@ export default function Layout({ user, onLogout, children }) {
         </div>
       </aside>
 
-      {!isDesktop && isSidebarOpen ? <div className="layout-overlay" onClick={() => setIsSidebarOpen(false)} /> : null}
+      {/* Overlay para fechar sidebar no mobile */}
+      {!isDesktop && isSidebarOpen && (
+        <div className="layout-overlay" onClick={closeSidebar} />
+      )}
 
+      {/* Conteúdo principal */}
       <div className="layout-content">
         <header className="page-header">
           <div>
@@ -93,16 +138,14 @@ export default function Layout({ user, onLogout, children }) {
             <h1 className="page-title">Smoke Garden</h1>
           </div>
           <div className="card-actions">
-            {!isDesktop && (
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsSidebarOpen(true)}>
-                <Menu size={16} />
-                Menu
-              </button>
-            )}
-            <div className="badge badge-muted">{displayEmail}</div>
+            <div className="badge badge-muted">
+              {displayEmail}
+            </div>
           </div>
         </header>
-        <main className="page-main">{children}</main>
+        <main className="page-main">
+          {children}
+        </main>
       </div>
     </div>
   )
