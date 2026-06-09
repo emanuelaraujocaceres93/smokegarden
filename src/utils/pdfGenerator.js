@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '../lib/supabaseClient';
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -7,6 +8,51 @@ const formatCurrency = (value) =>
 const formatDate = (date) => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('pt-BR')
+}
+
+// Cache para o logo
+let cachedLogoUrl = null
+let logoPromise = null
+
+async function getLogoUrl() {
+  if (cachedLogoUrl) return cachedLogoUrl
+  if (logoPromise) return logoPromise
+  
+  logoPromise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .select('logo_url')
+        .limit(1)
+        .maybeSingle()
+      
+      if (error) throw error
+      cachedLogoUrl = data?.logo_url || null
+      return cachedLogoUrl
+    } catch (err) {
+      console.log('Erro ao buscar logo:', err)
+      return null
+    }
+  })()
+  
+  return logoPromise
+}
+
+async function loadImageAsDataUrl(url) {
+  if (!url) return null
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error('Falha ao carregar imagem')
+    const blob = await response.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    })
+  } catch (err) {
+    console.log('Erro ao carregar imagem:', err)
+    return null
+  }
 }
 
 export async function generatePDF(orcamento, type = 'orcamento') {
@@ -20,19 +66,39 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFillColor(217, 90, 26)
     doc.rect(0, 0, pageWidth, 5, 'F')
     
-    doc.setFontSize(22)
-    doc.setTextColor(217, 90, 26)
-    doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
+    // Buscar logo automaticamente
+    const logoUrl = await getLogoUrl()
+    let logoLoaded = false
+    
+    if (logoUrl) {
+      const imgData = await loadImageAsDataUrl(logoUrl)
+      if (imgData) {
+        try {
+          doc.addImage(imgData, 'JPEG', pageWidth / 2 - 25, 8, 50, 20)
+          logoLoaded = true
+          y = 38
+        } catch (err) {
+          console.log('Erro ao adicionar logo:', err)
+        }
+      }
+    }
+    
+    if (!logoLoaded) {
+      doc.setFontSize(22)
+      doc.setTextColor(217, 90, 26)
+      doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
+      y = 30
+    }
     
     doc.setFontSize(10)
     doc.setTextColor(100, 100, 100)
-    doc.text('Mecânica Especializada 2 Tempos', pageWidth / 2, 28, { align: 'center' })
+    doc.text('Mecânica Especializada 2 Tempos', pageWidth / 2, y + 3, { align: 'center' })
     
     doc.setFontSize(9)
     doc.setTextColor(150, 150, 150)
-    doc.text('smokegarden.vercel.app/public', pageWidth / 2, 35, { align: 'center' })
+    doc.text('smokegarden.vercel.app/public', pageWidth / 2, y + 10, { align: 'center' })
     
-    y = 48
+    y = y + 25
     
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
@@ -91,7 +157,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     
     y += 10
 
-    // Preparar itens para a tabela
+    // Itens
     const itens = orcamento.itens || []
     
     const tableBody = itens.map(item => {
@@ -107,7 +173,6 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       tableBody.push(['Nenhum item adicionado', '-', '-', '-'])
     }
 
-    // Usar autoTable
     autoTable(doc, {
       startY: y,
       head: [['DESCRIÇÃO', 'QTD', 'UNITÁRIO', 'TOTAL']],
@@ -138,7 +203,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
 
     const finalY = doc.lastAutoTable.finalY + 10
 
-    // Calcular totais
+    // Totais
     const subtotal = itens.reduce((sum, item) => {
       const val = item.valor_total || item.preco_total || 
                   (item.valor_unitario || item.preco_unitario || 0) * (item.quantidade || 1)
