@@ -8,7 +8,6 @@ const emptyForm = {
   nome: '',
   descricao: '',
   valor: '',
-  imagens: '',
   imagem_url: '',
   ativo: true
 }
@@ -64,7 +63,6 @@ export default function Stock() {
       nome: item.nome || '',
       descricao: item.descricao || '',
       valor: item.valor ?? '',
-      imagens: Array.isArray(item.imagens) ? item.imagens.join('\n') : '',
       imagem_url: item.imagem_url || '',
       ativo: item.ativo !== false
     })
@@ -107,18 +105,11 @@ export default function Stock() {
     event.preventDefault()
     if (!form.nome.trim()) return toast.error('Nome é obrigatório')
 
-    const imagens = form.imagens
-      .split('\n')
-      .map((url) => url.trim())
-      .filter(Boolean)
-      .slice(0, 5)
-
     const payload = {
       tipo: form.tipo,
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       valor: Number(form.valor) || 0,
-      imagens: imagens.length > 0 ? imagens : null,
       imagem_url: form.imagem_url || null,
       ativo: form.ativo,
       updated_at: new Date().toISOString()
@@ -207,7 +198,11 @@ export default function Stock() {
                 </td>
                 <td>{item.tipo === 'produto' ? 'Produto' : 'Serviço'}</td>
                 <td>{formatCurrency(item.valor)}</td>
-                <td><span className={`badge ${item.ativo ? 'badge-success' : 'badge-danger'}`}>{item.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                <td>
+                  <span className={`badge ${item.ativo ? 'badge-success' : 'badge-danger'}`}>
+                    {item.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
+                </td>
                 <td className="actions-cell">
                   <button className="btn btn-secondary btn-sm" type="button" onClick={() => openEdit(item)}>Editar</button>
                   <button className="btn btn-danger btn-sm" type="button" onClick={() => handleDelete(item.id)}>Excluir</button>
@@ -215,7 +210,9 @@ export default function Stock() {
               </tr>
             ))}
             {filteredItems.length === 0 && (
-              <tr><td colSpan="6" className="page-empty">Nenhum item encontrado.</td></tr>
+              <tr>
+                <td colSpan="6" className="page-empty">Nenhum item encontrado.</td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -226,7 +223,7 @@ export default function Stock() {
           <div className="modal-panel modal-sm">
             <div className="modal-header">
               <h2 className="modal-title">{editing ? 'Editar item' : 'Novo item'}</h2>
-              <button className="modal-close" type="button" onClick={() => setShowModal(false)}>x</button>
+              <button className="modal-close" type="button" onClick={() => setShowModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="form-group">
@@ -236,20 +233,22 @@ export default function Stock() {
                   <option value="servico">Serviço</option>
                 </select>
               </div>
+
               <div className="form-group">
                 <label>Nome *</label>
                 <input className="form-input" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
               </div>
+
               <div className="form-group">
                 <label>Descrição</label>
                 <textarea className="form-textarea" rows="3" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
               </div>
+
               <div className="form-group">
                 <label>Valor *</label>
                 <input className="form-input" type="number" step="0.01" min="0" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />
               </div>
               
-              {/* Campo de upload de imagem */}
               <div className="form-group">
                 <label>Imagem do Produto</label>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
@@ -292,21 +291,16 @@ export default function Stock() {
                 </small>
               </div>
 
-              <div className="form-group">
-                <label>URLs das imagens (uma por linha, máximo 5)</label>
-                <textarea className="form-textarea" rows="4" value={form.imagens} onChange={(e) => setForm({ ...form, imagens: e.target.value })} />
-                <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-                  URLs externas para imagens adicionais
-                </small>
-              </div>
-
               <label className="actions-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                 <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
                 Ativo no cardápio público
               </label>
-              <div className="modal-footer" style={{ padding: 0, borderTop: 0 }}>
+
+              <div className="modal-footer" style={{ padding: 0, borderTop: 0, marginTop: 20 }}>
                 <button className="btn btn-secondary btn-md" type="button" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="btn btn-primary btn-md" type="submit" disabled={uploading}>Salvar</button>
+                <button className="btn btn-primary btn-md" type="submit" disabled={uploading}>
+                  {uploading ? 'Aguarde...' : 'Salvar'}
+                </button>
               </div>
             </form>
           </div>
