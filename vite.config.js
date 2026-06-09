@@ -45,18 +45,31 @@ export default defineConfig({
     })
   ],
   build: {
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // Separar bibliotecas grandes em chunks menores
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['lucide-react', 'react-hot-toast', 'date-fns'],
-          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
-          'vendor-charts': ['recharts'],
-          'vendor-supabase': ['@supabase/supabase-js']
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('lucide-react') || id.includes('react-hot-toast') || id.includes('date-fns')) {
+              return 'vendor-ui'
+            }
+            if (id.includes('jspdf') || id.includes('jspdf-autotable')) {
+              return 'vendor-pdf'
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts'
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase'
+            }
+            return 'vendor'
+          }
         }
       }
-    },
-    chunkSizeWarningLimit: 1000
+    }
   }
 })

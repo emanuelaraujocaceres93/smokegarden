@@ -1,0 +1,1 @@
+import{T as e}from"./vendor-react-DPcV1OcH.js";var t=e(),n=({title:e,description:n,actions:r})=>(0,t.jsxs)(`div`,{className:`page-header`,children:[(0,t.jsxs)(`div`,{children:[(0,t.jsx)(`h1`,{className:`page-title`,children:e}),n&&(0,t.jsx)(`p`,{className:`page-description`,children:n})]}),r&&(0,t.jsx)(`div`,{children:r})]});export{n as t};
