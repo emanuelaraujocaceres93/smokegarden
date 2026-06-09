@@ -4,30 +4,8 @@ import { QRCodeCanvas } from 'qrcode.react';
 import toast from 'react-hot-toast';
 
 export default function QRCodePage() {
-  const [empresa, setEmpresa] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const qrCodeRef = useRef(null);
-
-  useEffect(() => {
-    carregarConfiguracoes();
-  }, []);
-
-  async function carregarConfiguracoes() {
-    try {
-      const { data, error } = await supabase
-        .from('configuracoes')
-        .select('*')
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      setEmpresa(data);
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const url = 'https://smokegarden.vercel.app/public';
 
@@ -69,7 +47,6 @@ export default function QRCodePage() {
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Erro ao compartilhar:', error);
-        // Fallback: copiar link
         await navigator.clipboard.writeText(url);
         toast.success('Link copiado para a área de transferência!');
       }
@@ -88,64 +65,24 @@ export default function QRCodePage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px', color: '#ccc' }}>
-        Carregando...
+      <div className="loading-root">
+        <div className="spinner"></div>
+        <p>Carregando...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#1a1a1a',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div ref={qrCodeRef} style={{
-        backgroundColor: '#2a2a2a',
-        borderRadius: '24px',
-        padding: '40px',
-        maxWidth: '500px',
-        width: '100%',
-        textAlign: 'center',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
-      }}>
-        {/* Logo ou Título */}
-        {empresa?.logo_url ? (
-          <img 
-            src={empresa.logo_url} 
-            alt="Logo" 
-            style={{ 
-              maxWidth: '150px', 
-              maxHeight: '80px', 
-              marginBottom: '20px',
-              objectFit: 'contain'
-            }} 
-          />
-        ) : (
-          <h1 style={{ color: '#D95A1A', fontSize: '28px', marginBottom: '20px' }}>
-            Smoke Garden
-          </h1>
-        )}
+    <div className="qrcode-page">
+      <div className="qrcode-container" ref={qrCodeRef}>
+        <h1 className="qrcode-title">QR Code do Catálogo</h1>
         
-        <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '8px' }}>
-          Mecânica Especializada 2 Tempos
-        </h2>
-        
-        <p style={{ color: '#FFD700', fontSize: '14px', marginBottom: '30px' }}>
-          Escaneie o QR Code para acessar nosso catálogo
+        <p className="qrcode-subtitle">
+          Escaneie o QR Code para acessar nosso catálogo de produtos e serviços
         </p>
 
         {/* QR Code */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '16px',
-          display: 'inline-block',
-          marginBottom: '30px'
-        }}>
+        <div className="qrcode-box">
           <QRCodeCanvas 
             value={url} 
             size={200}
@@ -155,97 +92,186 @@ export default function QRCodePage() {
         </div>
 
         {/* URL */}
-        <p style={{ 
-          color: '#888', 
-          fontSize: '12px', 
-          marginBottom: '30px',
-          wordBreak: 'break-all',
-          backgroundColor: '#1a1a1a',
-          padding: '10px',
-          borderRadius: '8px'
-        }}>
-          {url}
-        </p>
+        <div className="qrcode-url">
+          <p>{url}</p>
+        </div>
 
         {/* Botões */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          <button
-            onClick={handleDownloadQRCode}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#D95A1A',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b84a14'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#D95A1A'}
-          >
+        <div className="qrcode-buttons">
+          <button onClick={handleDownloadQRCode} className="btn-qrcode btn-primary">
             📥 Baixar QR Code
           </button>
           
-          <button
-            onClick={handleShare}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#25D366',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#128C7E'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#25D366'}
-          >
+          <button onClick={handleShare} className="btn-qrcode btn-share">
             📤 Compartilhar
           </button>
           
-          <button
-            onClick={handleCopyLink}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#444'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#333'}
-          >
+          <button onClick={handleCopyLink} className="btn-qrcode btn-secondary">
             🔗 Copiar Link
           </button>
         </div>
 
         {/* Footer */}
-        <p style={{ color: '#666', fontSize: '11px', marginTop: '30px' }}>
+        <p className="qrcode-footer">
           Escaneie com a câmera do seu celular ou compartilhe o link
         </p>
       </div>
+
+      <style jsx>{`
+        .qrcode-page {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .qrcode-container {
+          background-color: #2a2a2a;
+          border-radius: 24px;
+          padding: 40px;
+          max-width: 500px;
+          width: 100%;
+          text-align: center;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .qrcode-title {
+          color: #D95A1A;
+          font-size: 28px;
+          margin-bottom: 12px;
+        }
+
+        .qrcode-subtitle {
+          color: #FFD700;
+          font-size: 14px;
+          margin-bottom: 30px;
+        }
+
+        .qrcode-box {
+          background-color: white;
+          padding: 20px;
+          border-radius: 16px;
+          display: inline-block;
+          margin-bottom: 30px;
+        }
+
+        .qrcode-url {
+          background-color: #1a1a1a;
+          padding: 10px;
+          border-radius: 8px;
+          margin-bottom: 30px;
+        }
+
+        .qrcode-url p {
+          color: #888;
+          font-size: 12px;
+          word-break: break-all;
+          margin: 0;
+        }
+
+        .qrcode-buttons {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
+
+        .btn-qrcode {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: bold;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+          background-color: #D95A1A;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background-color: #b84a14;
+          transform: translateY(-2px);
+        }
+
+        .btn-share {
+          background-color: #25D366;
+          color: white;
+        }
+
+        .btn-share:hover {
+          background-color: #128C7E;
+          transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+          background-color: #333;
+          color: white;
+        }
+
+        .btn-secondary:hover {
+          background-color: #444;
+          transform: translateY(-2px);
+        }
+
+        .qrcode-footer {
+          color: #666;
+          font-size: 11px;
+          margin: 0;
+        }
+
+        /* Responsividade */
+        @media (max-width: 480px) {
+          .qrcode-container {
+            padding: 24px;
+          }
+
+          .qrcode-title {
+            font-size: 24px;
+          }
+
+          .qrcode-subtitle {
+            font-size: 12px;
+          }
+
+          .qrcode-box {
+            padding: 15px;
+          }
+
+          .qrcode-box canvas {
+            width: 160px;
+            height: 160px;
+          }
+
+          .btn-qrcode {
+            padding: 10px 16px;
+            font-size: 12px;
+          }
+
+          .qrcode-buttons {
+            gap: 8px;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .qrcode-buttons {
+            flex-direction: column;
+          }
+
+          .btn-qrcode {
+            justify-content: center;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 }
