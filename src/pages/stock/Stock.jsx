@@ -194,7 +194,7 @@ export default function Stock() {
                 </td>
                 <td>
                   <strong>{item.nome}</strong>
-                  {item.descricao && <div className="text-muted">{item.descricao}</div>}
+                  {item.descricao && <div className="text-muted" style={{ fontSize: 12, marginTop: 4 }}>{item.descricao}</div>}
                 </td>
                 <td>{item.tipo === 'produto' ? 'Produto' : 'Serviço'}</td>
                 <td>{formatCurrency(item.valor)}</td>

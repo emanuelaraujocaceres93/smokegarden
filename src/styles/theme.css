@@ -73,7 +73,6 @@ img, svg {
   transform: translateX(-100%);
 }
 
-/* Header do sidebar - fixo no topo */
 .layout-sidebar-header {
   flex-shrink: 0;
   padding: 24px 20px 16px;
@@ -92,7 +91,6 @@ img, svg {
   font-size: 0.95rem;
 }
 
-/* Navegação com SCROLL - IMPORTANTE! */
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
@@ -104,7 +102,6 @@ img, svg {
   gap: 6px;
 }
 
-/* Scrollbar personalizada do menu */
 .sidebar-nav::-webkit-scrollbar {
   width: 4px;
 }
@@ -123,7 +120,6 @@ img, svg {
   background: #b84a14;
 }
 
-/* Footer do sidebar - fixo no bottom */
 .layout-sidebar-footer {
   flex-shrink: 0;
   padding: 16px 20px 24px;
@@ -131,7 +127,6 @@ img, svg {
   margin-top: 0;
 }
 
-/* Links do sidebar */
 .sidebar-link, .sidebar-button {
   display: flex;
   align-items: center;
@@ -156,7 +151,6 @@ img, svg {
   color: #ffffff;
 }
 
-/* Botão de logout */
 .sidebar-button {
   background: rgba(255, 255, 255, 0.03);
   margin-top: 8px;
@@ -258,7 +252,6 @@ img, svg {
   gap: 12px;
 }
 
-/* Botão menu mobile */
 .menu-toggle-btn {
   display: none;
   position: fixed;
@@ -357,7 +350,6 @@ img, svg {
   color: rgba(224, 224, 224, 0.9);
 }
 
-/* Inputs e textareas (mantido igual) */
 .form-group input,
 .form-group textarea,
 .form-input,
@@ -378,7 +370,6 @@ img, svg {
   box-shadow: 0 0 0 4px rgba(58, 95, 64, 0.18);
 }
 
-/* Selects corrigidos (agora com fundo escuro e texto branco) */
 .form-group select,
 .form-select {
   width: 100%;
@@ -415,10 +406,16 @@ img, svg {
   box-shadow: 0 0 0 2px rgba(217, 90, 26, 0.2);
 }
 
-/* ===== TABELAS ===== */
+/* ===== TABELAS COM RESPONSIVIDADE ===== */
 .table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 .table {
@@ -441,6 +438,44 @@ img, svg {
 
 .table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+  
+  .table {
+    min-width: 550px;
+    font-size: 12px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+  
+  .table th:first-child,
+  .table td:first-child {
+    width: 50px;
+    min-width: 50px;
+  }
+  
+  .actions-cell {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
 }
 
 /* ===== CARDS ===== */
