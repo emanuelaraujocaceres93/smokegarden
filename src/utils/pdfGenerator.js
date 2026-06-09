@@ -62,50 +62,48 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
 
-    // Cabeçalho
+    // ===== CABEÇALHO =====
     doc.setFillColor(217, 90, 26)
     doc.rect(0, 0, pageWidth, 5, 'F')
-    
-    // Buscar logo automaticamente
+
+    // Texto principal
+    doc.setFontSize(22)
+    doc.setTextColor(217, 90, 26)
+    doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
+    y = 30
+
+    // Tentar adicionar o logo (canto superior esquerdo com tamanho adequado)
     const logoUrl = await getLogoUrl()
-    let logoLoaded = false
-    
+
     if (logoUrl) {
-      const imgData = await loadImageAsDataUrl(logoUrl)
-      if (imgData) {
-        try {
-          doc.addImage(imgData, 'JPEG', pageWidth / 2 - 25, 8, 50, 20)
-          logoLoaded = true
-          y = 38
-        } catch (err) {
-          console.log('Erro ao adicionar logo:', err)
+      try {
+        const imgData = await loadImageAsDataUrl(logoUrl)
+        if (imgData) {
+          // Logo no canto esquerdo: x=15, y=8, largura=35, altura=25 (proporcional)
+          doc.addImage(imgData, 'JPEG', 15, 8, 35, 25)
         }
+      } catch (err) {
+        console.log('Erro ao adicionar logo:', err)
       }
     }
-    
-    if (!logoLoaded) {
-      doc.setFontSize(22)
-      doc.setTextColor(217, 90, 26)
-      doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
-      y = 30
-    }
-    
+
+    // Subtítulo
     doc.setFontSize(10)
     doc.setTextColor(100, 100, 100)
     doc.text('Mecânica Especializada 2 Tempos', pageWidth / 2, y + 3, { align: 'center' })
-    
+
     doc.setFontSize(9)
     doc.setTextColor(150, 150, 150)
     doc.text('smokegarden.vercel.app/public', pageWidth / 2, y + 10, { align: 'center' })
-    
+
     y = y + 25
-    
+
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
     doc.line(15, y, pageWidth - 15, y)
     y += 10
 
-    // Título
+    // Título do documento
     doc.setFillColor(217, 90, 26)
     doc.roundedRect(15, y - 4, pageWidth - 30, 12, 3, 3, 'F')
     doc.setTextColor(255, 255, 255)
@@ -157,7 +155,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     
     y += 10
 
-    // Itens
+    // Preparar itens para a tabela
     const itens = orcamento.itens || []
     
     const tableBody = itens.map(item => {
@@ -173,6 +171,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       tableBody.push(['Nenhum item adicionado', '-', '-', '-'])
     }
 
+    // Tabela
     autoTable(doc, {
       startY: y,
       head: [['DESCRIÇÃO', 'QTD', 'UNITÁRIO', 'TOTAL']],
@@ -183,7 +182,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
         fillColor: [217, 90, 26],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9,
+        fontSize: 10,
         halign: 'center'
       },
       bodyStyles: {
@@ -203,7 +202,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
 
     const finalY = doc.lastAutoTable.finalY + 10
 
-    // Totais
+    // Calcular totais
     const subtotal = itens.reduce((sum, item) => {
       const val = item.valor_total || item.preco_total || 
                   (item.valor_unitario || item.preco_unitario || 0) * (item.quantidade || 1)
