@@ -32,16 +32,15 @@ const navigation = [
 
 export default function Layout({ user, onLogout, children }) {
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false) // Começa FECHADO em todos os dispositivos
   const displayEmail = user?.email ?? 'administrador@smoke.com'
 
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024
       setIsDesktop(desktop)
-      if (desktop) {
-        setIsSidebarOpen(true)
-      } else {
+      // Quando redimensionar, mantém o menu fechado
+      if (!desktop) {
         setIsSidebarOpen(false)
       }
     }
@@ -55,15 +54,14 @@ export default function Layout({ user, onLogout, children }) {
   }
 
   const closeSidebar = () => {
-    if (!isDesktop) {
-      setIsSidebarOpen(false)
-    }
+    // Fecha o menu em TODOS os dispositivos
+    setIsSidebarOpen(false)
   }
 
   return (
     <div className="layout-shell">
-      {/* Botão do menu mobile - fora do sidebar para sempre ficar visível */}
-      {!isDesktop && !isSidebarOpen && (
+      {/* Botão do menu - visível em todos os dispositivos quando menu está fechado */}
+      {!isSidebarOpen && (
         <button className="menu-toggle-btn" onClick={toggleSidebar}>
           <Menu size={20} />
           Menu
@@ -71,27 +69,25 @@ export default function Layout({ user, onLogout, children }) {
       )}
 
       {/* Sidebar */}
-      <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'} ${!isDesktop ? 'mobile' : ''}`}>
+      <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="layout-sidebar-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1>Smoke Garden</h1>
-            {!isDesktop && (
-              <button 
-                onClick={closeSidebar}
-                style={{ 
-                  background: 'transparent', 
-                  border: 'none', 
-                  color: 'white', 
-                  cursor: 'pointer',
-                  padding: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <X size={24} />
-              </button>
-            )}
+            <button 
+              onClick={closeSidebar}
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                color: 'white', 
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={24} />
+            </button>
           </div>
           <p>Mecânica 2 Tempos</p>
         </div>
@@ -125,8 +121,8 @@ export default function Layout({ user, onLogout, children }) {
         </div>
       </aside>
 
-      {/* Overlay para fechar sidebar no mobile */}
-      {!isDesktop && isSidebarOpen && (
+      {/* Overlay para fechar sidebar quando clicar fora */}
+      {isSidebarOpen && (
         <div className="layout-overlay" onClick={closeSidebar} />
       )}
 
