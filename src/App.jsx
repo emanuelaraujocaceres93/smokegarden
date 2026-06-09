@@ -1,24 +1,56 @@
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { setupErrorHandling } from './utils/errorLogger';
 import Login from './pages/auth/Login';
 import Layout from './components/Layout/Layout';
-import Dashboard from './pages/dashboard/Dashboard';
-import Stock from './pages/stock/Stock';
-import People from './pages/people/People';
 import PublicMenu from './pages/public/PublicMenu';
-import Orcamentos from './pages/orcamentos/Orcamentos';
-import NovoOrcamento from './pages/orcamentos/NovoOrcamento';
-import OrcamentoDetalhes from './pages/orcamentos/OrcamentoDetalhes';
-import Sales from './pages/sales/Sales';
-import Accounts from './pages/accounts/Accounts';
-import Reports from './pages/reports/Reports';
-import Settings from './pages/settings/Settings';
-import CaixaDashboard from './pages/caixa/CaixaDashboard';
-import QRCodePage from './pages/QRCodePage';
-import VendaDetalhes from './pages/VendaDetalhes';
-import Avaliacoes from './pages/avaliacoes/Avaliacoes';
+
+// Lazy loading - carrega apenas quando necessário
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
+const Stock = lazy(() => import('./pages/stock/Stock'));
+const People = lazy(() => import('./pages/people/People'));
+const Orcamentos = lazy(() => import('./pages/orcamentos/Orcamentos'));
+const NovoOrcamento = lazy(() => import('./pages/orcamentos/NovoOrcamento'));
+const OrcamentoDetalhes = lazy(() => import('./pages/orcamentos/OrcamentoDetalhes'));
+const Sales = lazy(() => import('./pages/sales/Sales'));
+const Accounts = lazy(() => import('./pages/accounts/Accounts'));
+const Reports = lazy(() => import('./pages/reports/Reports'));
+const Settings = lazy(() => import('./pages/settings/Settings'));
+const CaixaDashboard = lazy(() => import('./pages/caixa/CaixaDashboard'));
+const QRCodePage = lazy(() => import('./pages/QRCodePage'));
+const VendaDetalhes = lazy(() => import('./pages/VendaDetalhes'));
+const Avaliacoes = lazy(() => import('./pages/avaliacoes/Avaliacoes'));
+
+// Componente de loading
+const PageLoader = () => (
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2C2C2C',
+    color: '#D95A1A'
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: '3px solid rgba(217, 90, 26, 0.2)',
+        borderTopColor: '#D95A1A',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        marginBottom: '12px'
+      }} />
+      <p>Carregando...</p>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  </div>
+);
 
 function AppContent() {
   const { user, loading, logout } = useAuth();
@@ -28,18 +60,7 @@ function AppContent() {
   }
 
   if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#2C2C2C',
-        color: '#E0E0E0'
-      }}>
-        Carregando...
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user) {
@@ -48,28 +69,30 @@ function AppContent() {
 
   return (
     <Layout user={user} onLogout={logout}>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/estoque" element={<Stock />} />
-        <Route path="/products" element={<Navigate to="/estoque" replace />} />
-        <Route path="/services" element={<Navigate to="/estoque" replace />} />
-        <Route path="/orcamentos" element={<Orcamentos />} />
-        <Route path="/orcamentos/novo" element={<NovoOrcamento />} />
-        <Route path="/orcamentos/:id" element={<OrcamentoDetalhes />} />
-        <Route path="/sales" element={<Sales />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/pessoas" element={<People />} />
-        <Route path="/clients" element={<Navigate to="/pessoas" replace />} />
-        <Route path="/suppliers" element={<Navigate to="/pessoas" replace />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/caixa" element={<CaixaDashboard />} />
-        <Route path="/qrcode" element={<QRCodePage />} />
-        <Route path="/avaliacoes" element={<Avaliacoes />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/sales/:id" element={<VendaDetalhes />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/estoque" element={<Stock />} />
+          <Route path="/products" element={<Navigate to="/estoque" replace />} />
+          <Route path="/services" element={<Navigate to="/estoque" replace />} />
+          <Route path="/orcamentos" element={<Orcamentos />} />
+          <Route path="/orcamentos/novo" element={<NovoOrcamento />} />
+          <Route path="/orcamentos/:id" element={<OrcamentoDetalhes />} />
+          <Route path="/sales" element={<Sales />} />
+          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/pessoas" element={<People />} />
+          <Route path="/clients" element={<Navigate to="/pessoas" replace />} />
+          <Route path="/suppliers" element={<Navigate to="/pessoas" replace />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/caixa" element={<CaixaDashboard />} />
+          <Route path="/qrcode" element={<QRCodePage />} />
+          <Route path="/avaliacoes" element={<Avaliacoes />} />
+          <Route path="/sales/:id" element={<VendaDetalhes />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }

@@ -1,5 +1,4 @@
-﻿// frontend/vite.config.js
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -44,5 +43,20 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separar bibliotecas grandes em chunks menores
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react', 'react-hot-toast', 'date-fns'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+          'vendor-charts': ['recharts'],
+          'vendor-supabase': ['@supabase/supabase-js']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  }
 })

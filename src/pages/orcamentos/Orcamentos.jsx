@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { Eye, Plus, FileText, CheckCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import toast from 'react-hot-toast'
-import { generatePDF } from '../../utils/pdfGenerator';
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
@@ -199,8 +198,12 @@ export default function Orcamentos() {
     }
   }
 
+  // PDF com import dinâmico (só carrega quando clicar)
   async function gerarPDF(orcamento) {
     try {
+      // Importa dinamicamente apenas quando necessário
+      const { generatePDF } = await import('../../utils/pdfGenerator');
+      
       const { data: itens } = await supabase
         .from('orcamento_itens')
         .select('*')
