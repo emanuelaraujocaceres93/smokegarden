@@ -414,15 +414,13 @@ img, svg {
   box-shadow: 0 0 0 2px rgba(217, 90, 26, 0.2);
 }
 
-/* ===== TABELAS COM RESPONSIVIDADE ===== */
+/* ===== TABELAS - Desktop ===== */
 .table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   width: 100%;
 }
 
@@ -448,139 +446,75 @@ img, svg {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Responsividade para telas pequenas */
+/* ===== TABELAS - Mobile (transforma em cards, SEM barras de rolagem) ===== */
 @media (max-width: 768px) {
-  .table-responsive {
-    overflow-x: auto;
-    margin: 0 -12px;
-    padding: 0 12px;
+  /* Esconde o cabeçalho da tabela */
+  .table thead {
+    display: none;
   }
   
-  .table {
-    min-width: 550px;
-    font-size: 12px;
+  /* Cada linha vira um card */
+  .table tbody tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--carbon);
   }
   
-  .table th,
-  .table td {
-    padding: 10px 8px;
-    white-space: nowrap;
-  }
-  
-  .table th:first-child,
-  .table td:first-child {
-    width: 50px;
-    min-width: 50px;
-  }
-  
-  .actions-cell {
+  /* Cada célula vira uma linha do card */
+  .table tbody td {
     display: flex;
-    flex-direction: row;
-    gap: 6px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: normal;
+    word-break: break-word;
+  }
+  
+  .table tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  /* Adiciona o label da coluna antes do valor */
+  .table tbody td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: var(--burnt);
+    text-align: left;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  
+  /* Ações na última linha - mantém os botões alinhados */
+  .table tbody td:last-child {
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  
+  .table tbody td:last-child::before {
+    display: none;
+  }
+  
+  /* Badges e status */
+  .badge {
     white-space: nowrap;
-  }
-  
-  .btn-sm {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-}
-
-/* ===== CORREÇÃO GLOBAL DE RESPONSIVIDADE ===== */
-@media (max-width: 768px) {
-  /* Garantir que nada ultrapasse a tela */
-  .layout-content,
-  .page-main,
-  body,
-  html,
-  #root {
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-  }
-  
-  /* Força todas as tabelas a não terem minWidth fixo */
-  .table,
-  .table-responsive table,
-  table[style*="minWidth"] {
-    min-width: auto !important;
-    width: 100% !important;
-  }
-  
-  /* Permite scroll horizontal apenas quando necessário */
-  .table-responsive {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* Mantém a tabela legível com scroll */
-  .table-responsive table {
-    min-width: 550px !important;
-    width: 550px !important;
-  }
-  
-  /* Ajusta padding das células */
-  .table th,
-  .table td,
-  th, td {
-    padding: 8px 6px !important;
-    font-size: 11px !important;
   }
   
   /* Botões menores */
   .btn-sm {
-    padding: 4px 6px !important;
-    font-size: 10px !important;
+    padding: 4px 8px;
+    font-size: 11px;
   }
   
-  /* Grids responsivos */
-  [style*="display: grid"],
-  [style*="display:grid"] {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  
-  /* Ajusta containers */
-  .panel {
-    padding: 12px !important;
-  }
-  
-  /* Ajusta header */
-  .page-header {
-    padding: 12px !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-  
-  .page-title {
-    font-size: 18px !important;
-  }
-  
-  /* Ajusta ações row */
-  .actions-row {
-    flex-direction: column !important;
-  }
-  
-  .actions-row .form-input,
-  .actions-row .form-select,
-  .actions-row select,
-  .actions-row input {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  /* Ajusta cards */
-  .card {
-    padding: 12px !important;
-  }
-  
-  /* Ajusta modal */
-  .modal-panel {
-    width: 95% !important;
-    margin: 10px !important;
-  }
-  
-  .modal-body {
-    padding: 16px !important;
+  /* Actions cell */
+  .actions-cell {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
   }
 }
 
@@ -806,14 +740,6 @@ img, svg {
   }
   .page-title {
     font-size: 20px;
-  }
-  .table-desktop-only {
-    display: none;
-  }
-  .cards-mobile-only {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
   }
 }
 

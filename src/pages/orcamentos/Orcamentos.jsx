@@ -198,10 +198,8 @@ export default function Orcamentos() {
     }
   }
 
-  // PDF com import dinâmico (só carrega quando clicar)
   async function gerarPDF(orcamento) {
     try {
-      // Importa dinamicamente apenas quando necessário
       const { generatePDF } = await import('../../utils/pdfGenerator');
       
       const { data: itens } = await supabase
@@ -275,120 +273,53 @@ export default function Orcamentos() {
         </div>
       </div>
 
-      <div style={{ 
+      <div className="table-responsive" style={{ 
         backgroundColor: '#2a2a2a', 
-        borderRadius: '12px', 
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch'
+        borderRadius: '12px'
       }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Carregando orçamentos...</div>
         ) : orcamentos.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum orçamento encontrado.</div>
         ) : (
-          <table style={{ 
-            width: '100%', 
-            minWidth: '700px', 
-            borderCollapse: 'collapse',
-            fontSize: window.innerWidth <= 768 ? '12px' : '14px'
-          }}>
-            <thead style={{ backgroundColor: '#333' }}>
+          <table className="table">
+            <thead>
               <tr>
-                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Número</th>
-                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Cliente</th>
-                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Data</th>
-                <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Total</th>
-                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Status</th>
-                <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Ações</th>
+                <th>Número</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {orcamentos.map((orcamento) => (
-                <tr key={orcamento.id} style={{ borderBottom: '1px solid #333' }}>
-                  <td style={{ padding: '12px', color: 'white' }}>#{orcamento.numero_orcamento || orcamento.id?.slice(0, 8)}</td>
-                  <td style={{ padding: '12px', color: 'white' }}>
-                    {orcamento.cliente_nome || clientesMap[orcamento.cliente_id] || 'Cliente avulso'}
-                  </td>
-                  <td style={{ padding: '12px', color: '#aaa' }}>
+                <tr key={orcamento.id}>
+                  <td data-label="Número">#{orcamento.numero_orcamento || orcamento.id?.slice(0, 8)}</td>
+                  <td data-label="Cliente">{orcamento.cliente_nome || clientesMap[orcamento.cliente_id] || 'Cliente avulso'}</td>
+                  <td data-label="Data">
                     {orcamento.data_criacao ? new Date(orcamento.data_criacao).toLocaleDateString('pt-BR') : 
                      orcamento.created_at ? new Date(orcamento.created_at).toLocaleDateString('pt-BR') : '-'}
                   </td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>
-                    {formatCurrency(orcamento.total || 0)}
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    <span style={{ 
-                      padding: '4px 8px', 
-                      borderRadius: '20px', 
-                      fontSize: '11px',
-                      whiteSpace: 'nowrap',
-                      backgroundColor: orcamento.status === 'aprovado' ? '#22c55e20' : '#f59e0b20',
-                      color: orcamento.status === 'aprovado' ? '#4ade80' : '#fbbf24'
-                    }}>
+                  <td data-label="Total" className="text-right">{formatCurrency(orcamento.total || 0)}</td>
+                  <td data-label="Status">
+                    <span className={`badge ${orcamento.status === 'aprovado' ? 'badge-success' : 'badge-warning'}`}>
                       {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
                     </span>
                   </td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '6px', 
-                      justifyContent: 'center',
-                      flexWrap: 'wrap'
-                    }}>
-                      <Link 
-                        to={`/orcamentos/${orcamento.id}`} 
-                        style={{ 
-                          padding: '6px 10px', 
-                          backgroundColor: '#333', 
-                          color: '#60a5fa', 
-                          borderRadius: '6px', 
-                          textDecoration: 'none', 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: '4px',
-                          fontSize: '12px'
-                        }}
-                      >
-                        <Eye size={12} /> Ver
-                      </Link>
-                      <button 
-                        onClick={() => gerarPDF(orcamento)} 
-                        style={{ 
-                          padding: '6px 10px', 
-                          backgroundColor: '#333', 
-                          color: '#fbbf24', 
-                          border: 'none', 
-                          borderRadius: '6px', 
-                          cursor: 'pointer', 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: '4px',
-                          fontSize: '12px'
-                        }}
-                      >
-                        <FileText size={12} /> PDF
+                  <td data-label="Ações" className="actions-cell">
+                    <Link to={`/orcamentos/${orcamento.id}`} className="btn btn-secondary btn-sm">
+                      <Eye size={12} /> Ver
+                    </Link>
+                    <button onClick={() => gerarPDF(orcamento)} className="btn btn-warning btn-sm">
+                      <FileText size={12} /> PDF
+                    </button>
+                    {orcamento.status !== 'aprovado' && (
+                      <button onClick={() => aprovarOrcamento(orcamento)} disabled={aprovando === orcamento.id} className="btn btn-success btn-sm">
+                        <CheckCircle size={12} /> {aprovando === orcamento.id ? '...' : 'Aprovar'}
                       </button>
-                      {orcamento.status !== 'aprovado' && (
-                        <button 
-                          onClick={() => aprovarOrcamento(orcamento)} 
-                          disabled={aprovando === orcamento.id} 
-                          style={{ 
-                            padding: '6px 10px', 
-                            backgroundColor: aprovando === orcamento.id ? '#555' : '#22c55e20', 
-                            color: aprovando === orcamento.id ? '#aaa' : '#4ade80', 
-                            border: 'none', 
-                            borderRadius: '6px', 
-                            cursor: aprovando === orcamento.id ? 'not-allowed' : 'pointer', 
-                            display: 'inline-flex', 
-                            alignItems: 'center', 
-                            gap: '4px',
-                            fontSize: '12px'
-                          }}
-                        >
-                          <CheckCircle size={12} /> {aprovando === orcamento.id ? 'Aprovando...' : 'Aprovar'}
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))}

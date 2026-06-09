@@ -168,7 +168,7 @@ export default function Stock() {
         <table className="table">
           <thead>
             <tr>
-              <th style={{ width: 60 }}>Imagem</th>
+              <th>Imagem</th>
               <th>Nome</th>
               <th>Tipo</th>
               <th>Valor</th>
@@ -179,7 +179,7 @@ export default function Stock() {
           <tbody>
             {filteredItems.map((item) => (
               <tr key={item.id}>
-                <td>
+                <td data-label="Imagem">
                   {item.imagem_url ? (
                     <img 
                       src={item.imagem_url} 
@@ -192,18 +192,18 @@ export default function Stock() {
                     </div>
                   )}
                 </td>
-                <td>
+                <td data-label="Nome">
                   <strong>{item.nome}</strong>
                   {item.descricao && <div className="text-muted" style={{ fontSize: 12, marginTop: 4 }}>{item.descricao}</div>}
                 </td>
-                <td>{item.tipo === 'produto' ? 'Produto' : 'Serviço'}</td>
-                <td>{formatCurrency(item.valor)}</td>
-                <td>
+                <td data-label="Tipo">{item.tipo === 'produto' ? 'Produto' : 'Serviço'}</td>
+                <td data-label="Valor" className="text-right">{formatCurrency(item.valor)}</td>
+                <td data-label="Status">
                   <span className={`badge ${item.ativo ? 'badge-success' : 'badge-danger'}`}>
                     {item.ativo ? 'Ativo' : 'Inativo'}
                   </span>
                 </td>
-                <td className="actions-cell">
+                <td data-label="Ações" className="actions-cell">
                   <button className="btn btn-secondary btn-sm" type="button" onClick={() => openEdit(item)}>Editar</button>
                   <button className="btn btn-danger btn-sm" type="button" onClick={() => handleDelete(item.id)}>Excluir</button>
                 </td>

@@ -170,38 +170,46 @@ export default function CaixaDashboard() {
         </div>
       </div>
 
-      <div className="table-responsive" style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', overflowX: 'auto' }}>
-        <table style={{ width: '100%', minWidth: '550px', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: '#333' }}>
+      <div className="table-responsive" style={{ backgroundColor: '#2a2a2a', borderRadius: '12px' }}>
+        <table className="table">
+          <thead>
             <tr>
-              <th onClick={() => handleSort('tipo')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Tipo {getSortIcon('tipo')}</th>
-              <th onClick={() => handleSort('numero')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Número {getSortIcon('numero')}</th>
-              <th onClick={() => handleSort('cliente')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Cliente {getSortIcon('cliente')}</th>
-              <th onClick={() => handleSort('valor')} style={{ padding: '12px', textAlign: 'right', color: '#aaa', cursor: 'pointer' }}>Valor {getSortIcon('valor')}</th>
-              <th onClick={() => handleSort('data')} style={{ padding: '12px', textAlign: 'left', color: '#aaa', cursor: 'pointer' }}>Data {getSortIcon('data')}</th>
-              <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }} colSpan="2">Ações</th>
+              <th>Tipo</th>
+              <th>Número</th>
+              <th>Cliente</th>
+              <th>Valor</th>
+              <th>Data</th>
+              <th colSpan="2">Ações</th>
             </tr>
           </thead>
           <tbody>
             {movimentacoesOrdenadas.length === 0 ? (
-              <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td></tr>
+              <td><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma movimentação encontrada</td></td>
             ) : (
               movimentacoesOrdenadas.map((m, index) => (
-                <tr key={m.id || index} style={{ borderBottom: '1px solid #333' }}>
-                  <td style={{ padding: '12px' }}><span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', backgroundColor: m.tipo === 'orcamento' ? '#f59e0b20' : '#22c55e20', color: m.tipo === 'orcamento' ? '#fbbf24' : '#4ade80' }}>{m.tipo === 'orcamento' ? (m.temItens ? '📋 Orçamento' : '📋 Orçamento (Sem Itens)') : '💰 Venda'}</span></td>
-                  <td style={{ padding: '12px', color: 'white' }}>#{m.numero}</td>
-                  <td style={{ padding: '12px', color: 'white' }}>{m.cliente || '—'}</td>
-                  <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(m.valor)}</td>
-                  <td style={{ padding: '12px', color: '#aaa' }}>{formatDate(m.data)}</td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}><button onClick={() => handleVerDetalhes(m)} style={{ padding: '6px 12px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', marginRight: '5px' }}>👁️ Ver</button></td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}><button onClick={() => excluirMovimentacao(m)} disabled={excluindo === m.id} style={{ padding: '6px 12px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: excluindo === m.id ? 'not-allowed' : 'pointer', fontSize: '12px', opacity: excluindo === m.id ? 0.6 : 1 }}>{excluindo === m.id ? '...' : '🗑️ Excluir'}</button></td>
+                <tr key={m.id || index}>
+                  <td data-label="Tipo">
+                    <span className={`badge ${m.tipo === 'orcamento' ? 'badge-warning' : 'badge-success'}`}>
+                      {m.tipo === 'orcamento' ? (m.temItens ? '📋 Orçamento' : '📋 Orçamento (Sem Itens)') : '💰 Venda'}
+                    </span>
+                  </td>
+                  <td data-label="Número">#{m.numero}</td>
+                  <td data-label="Cliente">{m.cliente || '—'}</td>
+                  <td data-label="Valor" className="text-right">{formatCurrency(m.valor)}</td>
+                  <td data-label="Data">{formatDate(m.data)}</td>
+                  <td data-label="Ações" className="actions-cell">
+                    <button onClick={() => handleVerDetalhes(m)} className="btn btn-primary btn-sm">👁️ Ver</button>
+                    <button onClick={() => excluirMovimentacao(m)} disabled={excluindo === m.id} className="btn btn-danger btn-sm">
+                      {excluindo === m.id ? '...' : '🗑️ Excluir'}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
           {movimentacoesOrdenadas.length > 0 && (
-            <tfoot style={{ backgroundColor: '#333', borderTop: '2px solid #444' }}>
-              <tr><td colSpan="4" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold' }}>Total Geral:</td><td style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(stats.totalEntradas)}</td><td colSpan="2"></td></tr>
+            <tfoot>
+              <tr><td colSpan="4" style={{ textAlign: 'right', fontWeight: 'bold' }}>Total Geral:</td><td className="text-right" style={{ fontWeight: 'bold', color: '#4ade80' }}>{formatCurrency(stats.totalEntradas)}</td><td></td></tr>
             </tfoot>
           )}
         </table>
