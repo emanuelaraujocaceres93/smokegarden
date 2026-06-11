@@ -72,14 +72,13 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
     y = 30
 
-    // Tentar adicionar o logo (canto superior esquerdo com tamanho adequado)
+    // Tentar adicionar o logo
     const logoUrl = await getLogoUrl()
 
     if (logoUrl) {
       try {
         const imgData = await loadImageAsDataUrl(logoUrl)
         if (imgData) {
-          // Logo no canto esquerdo: x=15, y=8, largura=35, altura=25 (proporcional)
           doc.addImage(imgData, 'JPEG', 15, 8, 35, 25)
         }
       } catch (err) {
@@ -94,7 +93,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
 
     doc.setFontSize(9)
     doc.setTextColor(150, 150, 150)
-    doc.text('smokegarden.vercel.app/public', pageWidth / 2, y + 10, { align: 'center' })
+    doc.text('www.smokegarden.com.br', pageWidth / 2, y + 10, { align: 'center' })
 
     y = y + 25
 
@@ -214,16 +213,19 @@ export async function generatePDF(orcamento, type = 'orcamento') {
 
     const totalX = pageWidth - 50
     
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100, 100, 100)
-    doc.text('Subtotal:', totalX - 35, finalY)
-    doc.setTextColor(60, 60, 60)
-    doc.text(formatCurrency(subtotal), totalX, finalY)
-    
-    let currentY = finalY + 8
+    // SÓ mostra Subtotal se houver desconto
+    let currentY = finalY
     
     if (desconto > 0) {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(100, 100, 100)
+      doc.text('Subtotal:', totalX - 35, currentY)
+      doc.setTextColor(60, 60, 60)
+      doc.text(formatCurrency(subtotal), totalX, currentY)
+      
+      currentY += 8
+      
       doc.setTextColor(100, 100, 100)
       doc.text('Desconto:', totalX - 35, currentY)
       doc.setTextColor(220, 38, 38)
@@ -232,10 +234,12 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       currentY += 8
     }
     
+    // Linha separadora (só se houver desconto, ou sempre para destacar)
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
     doc.line(totalX - 45, currentY - 3, pageWidth - 15, currentY - 3)
     
+    // VALOR TOTAL (sempre mostra)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(34, 197, 94)
