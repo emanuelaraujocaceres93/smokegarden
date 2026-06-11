@@ -49,7 +49,7 @@ export default function Layout({ user, onLogout, children }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Configurar notificações push (versão simplificada)
+  // Configurar notificações push - apenas pede permissão, sem inicializar
   useEffect(() => {
     if (!user) return
     
@@ -57,10 +57,6 @@ export default function Layout({ user, onLogout, children }) {
       if (window.OneSignalDeferred) {
         window.OneSignalDeferred.push(async (OneSignal) => {
           try {
-            await OneSignal.init({
-              appId: "0f70a363-cb11-4ab4-82a9-3941f5e8c358",
-            })
-            
             if (Notification.permission === 'default') {
               await OneSignal.registerForPushNotifications()
               console.log('✅ Pedido de permissão enviado')
@@ -72,7 +68,7 @@ export default function Layout({ user, onLogout, children }) {
           }
         })
       }
-    }, 3000)
+    }, 4000)
     
     return () => clearTimeout(timer)
   }, [user])
