@@ -11,11 +11,9 @@ const Dashboard = () => {
     totalProducts: 0,
     totalServices: 0,
     lowStockProducts: 0,
-    pendingPayments: 0,
-    productsExpiring: 0
+    pendingPayments: 0
   })
   const [lowStockList, setLowStockList] = useState([])
-  const [expiringList, setExpiringList] = useState([])
   const [recentSales, setRecentSales] = useState([])
 
   useEffect(() => {
@@ -30,15 +28,9 @@ const Dashboard = () => {
       const products = (estoque || []).filter((item) => item.tipo === 'produto')
       const services = (estoque || []).filter((item) => item.tipo === 'servico')
       
+      // Produtos com estoque baixo (quantidade <= estoque_minimo)
       const lowStock = (estoque || []).filter((item) => 
-        item.tipo === 'produto' && (item.quantidade || 0) < 5
-      )
-      
-      const thirtyDaysFromNow = new Date()
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-      
-      const expiring = (estoque || []).filter((item) => 
-        item.tipo === 'produto' && item.validade && new Date(item.validade) <= thirtyDaysFromNow
+        item.tipo === 'produto' && (item.quantidade || 0) <= (item.estoque_minimo || 5)
       )
       
       const firstDayOfMonth = new Date()
@@ -87,12 +79,10 @@ const Dashboard = () => {
         totalProducts: (products || []).length,
         totalServices: (services || []).length,
         lowStockProducts: lowStock.length,
-        pendingPayments: (installments || []).length,
-        productsExpiring: expiring.length
+        pendingPayments: (installments || []).length
       })
       
       setLowStockList(lowStock.slice(0, 10))
-      setExpiringList(expiring.slice(0, 10))
       setRecentSales(recentWithNames)
       
     } catch (error) {
@@ -118,9 +108,6 @@ const Dashboard = () => {
         break
       case 'pending':
         navigate('/accounts')
-        break
-      case 'expiring':
-        navigate('/estoque')
         break
       default:
         break
@@ -185,7 +172,6 @@ const Dashboard = () => {
         <StatCard label="Total Serviços" value={stats.totalServices} color="#D95A1A" onClick={() => handleCardClick('services')} icon="🔧" />
         <StatCard label="Estoque baixo" value={stats.lowStockProducts} color="#fbbf24" onClick={() => handleCardClick('lowStock')} icon="⚠️" />
         <StatCard label="Pagamentos Pendentes" value={stats.pendingPayments} color="#f87171" onClick={() => handleCardClick('pending')} icon="📋" />
-        <StatCard label="Produtos a Vencer" value={stats.productsExpiring} color="#fbbf24" onClick={() => handleCardClick('expiring')} icon="⏰" />
       </div>
 
       {lowStockList.length > 0 && (
@@ -198,39 +184,15 @@ const Dashboard = () => {
                   <th style={{ padding: '8px' }}>Produto</th>
                   <th style={{ padding: '8px' }}>Estoque</th>
                   <th style={{ padding: '8px' }}>Mínimo</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {lowStockList.map((p) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '8px', color: 'white' }}>{p.nome}</td>
-                    <td style={{ padding: '8px', color: '#fbbf24' }}>{p.quantidade || 0}</td>
-                    <td style={{ padding: '8px', color: '#9CA3AF' }}>5</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {expiringList.length > 0 && (
-        <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <h3 style={{ color: '#fbbf24', fontSize: '18px', marginBottom: '12px' }}>⏰ Produtos Próximos ao Vencimento</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', color: '#9CA3AF', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <th style={{ padding: '8px' }}>Produto</th>
-                  <th style={{ padding: '8px' }}>Validade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expiringList.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '8px', color: 'white' }}>{p.nome}</td>
-                    <td style={{ padding: '8px', color: '#fbbf24' }}>{p.validade ? format(new Date(p.validade), 'dd/MM/yyyy') : '-'}</td>
-                  </tr>
+                    <td style={{ padding: '8px', color: '#fbbf24' }}>{p.quantidade || 0} {p.unidade_medida || 'un'}</td>
+                    <td style={{ padding: '8px', color: '#9CA3AF' }}>{p.estoque_minimo || 5}</td>
+                   </tr>
                 ))}
               </tbody>
             </table>
@@ -247,20 +209,20 @@ const Dashboard = () => {
                 <th style={{ padding: '8px' }}>Data</th>
                 <th style={{ padding: '8px' }}>Cliente</th>
                 <th style={{ padding: '8px' }}>Total</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {recentSales.length === 0 ? (
-                <tr>
+                 <tr>
                   <td colSpan="3" style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Nenhuma venda registrada</td>
-                </tr>
+                 </tr>
               ) : (
                 recentSales.map((s) => (
                   <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '8px', color: '#9CA3AF' }}>{format(new Date(s.created_at), 'dd/MM/yyyy')}</td>
                     <td style={{ padding: '8px', color: 'white' }}>{s.cliente_nome || 'Cliente avulso'}</td>
                     <td style={{ padding: '8px', color: '#4ade80' }}>{formatCurrency(s.total || s.valor_total || 0)}</td>
-                  </tr>
+                   </tr>
                 ))
               )}
             </tbody>

@@ -7,7 +7,8 @@ export default function QRCodePage() {
   const [loading, setLoading] = useState(false);
   const qrCodeRef = useRef(null);
 
-  const url = 'https://smokegarden.vercel.app/public';
+  // ALTERADO: Novo domínio público
+  const url = 'https://www.smokegarden.com.br';
 
   const handleDownloadQRCode = () => {
     try {

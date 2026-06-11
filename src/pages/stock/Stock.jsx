@@ -8,6 +8,9 @@ const emptyForm = {
   nome: '',
   descricao: '',
   valor: '',
+  quantidade: 0,
+  estoque_minimo: 5,
+  unidade_medida: 'un',
   imagem_url: '',
   ativo: true
 }
@@ -63,6 +66,9 @@ export default function Stock() {
       nome: item.nome || '',
       descricao: item.descricao || '',
       valor: item.valor ?? '',
+      quantidade: item.quantidade ?? 0,
+      estoque_minimo: item.estoque_minimo ?? 5,
+      unidade_medida: item.unidade_medida || 'un',
       imagem_url: item.imagem_url || '',
       ativo: item.ativo !== false
     })
@@ -110,6 +116,9 @@ export default function Stock() {
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       valor: Number(form.valor) || 0,
+      quantidade: Number(form.quantidade) || 0,
+      estoque_minimo: Number(form.estoque_minimo) || 5,
+      unidade_medida: form.unidade_medida || 'un',
       imagem_url: form.imagem_url || null,
       ativo: form.ativo,
       updated_at: new Date().toISOString()
@@ -143,6 +152,12 @@ export default function Stock() {
     }
   }
 
+  // Verifica se o estoque está baixo
+  const isLowStock = (item) => {
+    if (item.tipo !== 'produto') return false
+    return (item.quantidade || 0) <= (item.estoque_minimo || 5)
+  }
+
   if (loading) return <div className="page-empty">Carregando estoque...</div>
 
   return (
@@ -172,6 +187,7 @@ export default function Stock() {
               <th>Nome</th>
               <th>Tipo</th>
               <th>Valor</th>
+              <th>Estoque</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -198,20 +214,33 @@ export default function Stock() {
                 </td>
                 <td data-label="Tipo">{item.tipo === 'produto' ? 'Produto' : 'Serviço'}</td>
                 <td data-label="Valor" className="text-right">{formatCurrency(item.valor)}</td>
+                <td data-label="Estoque">
+                  {item.tipo === 'produto' ? (
+                    <span style={{ 
+                      color: isLowStock(item) ? '#fbbf24' : '#4ade80',
+                      fontWeight: isLowStock(item) ? 'bold' : 'normal'
+                    }}>
+                      {item.quantidade || 0} {item.unidade_medida || 'un'}
+                      {isLowStock(item) && <span style={{ fontSize: 11, marginLeft: 5 }}>⚠️</span>}
+                    </span>
+                  ) : (
+                    <span style={{ color: '#666' }}>—</span>
+                  )}
+                 </td>
                 <td data-label="Status">
                   <span className={`badge ${item.ativo ? 'badge-success' : 'badge-danger'}`}>
                     {item.ativo ? 'Ativo' : 'Inativo'}
                   </span>
-                </td>
+                 </td>
                 <td data-label="Ações" className="actions-cell">
-                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => openEdit(item)}>Editar</button>
-                  <button className="btn btn-danger btn-sm" type="button" onClick={() => handleDelete(item.id)}>Excluir</button>
-                </td>
-              </tr>
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={() => openEdit(item)}>✏️ Editar</button>
+                  <button className="btn btn-danger btn-sm" type="button" onClick={() => handleDelete(item.id)}>🗑️ Excluir</button>
+                 </td>
+               </tr>
             ))}
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan="6" className="page-empty">Nenhum item encontrado.</td>
+                <td colSpan="7" className="page-empty">Nenhum item encontrado.</td>
               </tr>
             )}
           </tbody>
@@ -220,7 +249,7 @@ export default function Stock() {
 
       {showModal && (
         <div className="modal-backdrop">
-          <div className="modal-panel modal-sm">
+          <div className="modal-panel" style={{ maxWidth: 600 }}>
             <div className="modal-header">
               <h2 className="modal-title">{editing ? 'Editar item' : 'Novo item'}</h2>
               <button className="modal-close" type="button" onClick={() => setShowModal(false)}>✕</button>
@@ -248,6 +277,47 @@ export default function Stock() {
                 <label>Valor *</label>
                 <input className="form-input" type="number" step="0.01" min="0" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required />
               </div>
+
+              {form.tipo === 'produto' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="form-group">
+                      <label>Quantidade em estoque</label>
+                      <input 
+                        className="form-input" 
+                        type="number" 
+                        step="1" 
+                        min="0" 
+                        value={form.quantidade} 
+                        onChange={(e) => setForm({ ...form, quantidade: parseInt(e.target.value) || 0 })} 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Estoque mínimo (alerta)</label>
+                      <input 
+                        className="form-input" 
+                        type="number" 
+                        step="1" 
+                        min="0" 
+                        value={form.estoque_minimo} 
+                        onChange={(e) => setForm({ ...form, estoque_minimo: parseInt(e.target.value) || 0 })} 
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Unidade de medida</label>
+                    <select className="form-select" value={form.unidade_medida} onChange={(e) => setForm({ ...form, unidade_medida: e.target.value })}>
+                      <option value="un">Unidade (un)</option>
+                      <option value="kg">Quilograma (kg)</option>
+                      <option value="g">Grama (g)</option>
+                      <option value="L">Litro (L)</option>
+                      <option value="ml">Mililitro (ml)</option>
+                      <option value="cx">Caixa (cx)</option>
+                      <option value="pc">Pç</option>
+                    </select>
+                  </div>
+                </>
+              )}
               
               <div className="form-group">
                 <label>Imagem do Produto</label>

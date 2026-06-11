@@ -7,6 +7,13 @@ import toast from 'react-hot-toast'
 const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
 
+function getOrigemBadge(origem) {
+  if (origem === 'publico') {
+    return <span style={{ backgroundColor: '#D95A1A', color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>🌐 Site</span>
+  }
+  return <span style={{ backgroundColor: '#3A5F40', color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>📋 Interno</span>
+}
+
 export default function Orcamentos() {
   const location = useLocation()
   const [orcamentos, setOrcamentos] = useState([])
@@ -247,7 +254,7 @@ export default function Orcamentos() {
           <div>
             <h1 style={{ color: 'white', fontSize: window.innerWidth <= 768 ? '24px' : '28px', margin: 0 }}>Orçamentos</h1>
             <p style={{ color: '#888', margin: '5px 0 0', fontSize: window.innerWidth <= 768 ? '13px' : '14px' }}>
-              Gerencie propostas criadas a partir do estoque.
+              Gerencie propostas criadas a partir do estoque ou do site público.
             </p>
           </div>
           <Link 
@@ -301,13 +308,16 @@ export default function Orcamentos() {
                   <td data-label="Data">
                     {orcamento.data_criacao ? new Date(orcamento.data_criacao).toLocaleDateString('pt-BR') : 
                      orcamento.created_at ? new Date(orcamento.created_at).toLocaleDateString('pt-BR') : '-'}
-                  </td>
+                   </td>
                   <td data-label="Total" className="text-right">{formatCurrency(orcamento.total || 0)}</td>
                   <td data-label="Status">
-                    <span className={`badge ${orcamento.status === 'aprovado' ? 'badge-success' : 'badge-warning'}`}>
-                      {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
-                    </span>
-                  </td>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {getOrigemBadge(orcamento.origem)}
+                      <span className={`badge ${orcamento.status === 'aprovado' ? 'badge-success' : 'badge-warning'}`}>
+                        {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
+                      </span>
+                    </div>
+                   </td>
                   <td data-label="Ações" className="actions-cell">
                     <Link to={`/orcamentos/${orcamento.id}`} className="btn btn-secondary btn-sm">
                       <Eye size={12} /> Ver
@@ -320,11 +330,11 @@ export default function Orcamentos() {
                         <CheckCircle size={12} /> {aprovando === orcamento.id ? '...' : 'Aprovar'}
                       </button>
                     )}
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
-          </table>
+           </table>
         )}
       </div>
     </div>

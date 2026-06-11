@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import { ShoppingBag, MapPin, Plus, Minus, Trash2, Star, X, Check, Phone, Mail, User } from 'lucide-react';
+import { ShoppingBag, MapPin, Plus, Minus, Trash2, Star, X, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PublicMenu() {
@@ -251,12 +251,8 @@ export default function PublicMenu() {
         .single();
       
       if (configData) {
-        if (configData.whatsapp_admin) {
-          whatsappNumber = configData.whatsapp_admin;
-        }
-        if (configData.endereco_loja) {
-          enderecoLoja = configData.endereco_loja;
-        }
+        if (configData.whatsapp_admin) whatsappNumber = configData.whatsapp_admin;
+        if (configData.endereco_loja) enderecoLoja = configData.endereco_loja;
       }
 
       const numeroLimpo = whatsappNumber.replace(/\D/g, '');
@@ -267,11 +263,131 @@ export default function PublicMenu() {
         return;
       }
 
-      // Mensagem mais limpa e profissional
+      console.log('=== INICIANDO PEDIDO ===');
+      console.log('Cliente:', clienteNome);
+      console.log('Total do carrinho:', totalCarrinho);
+      console.log('Itens no carrinho:', cart.length);
+
+      // 1. SALVAR NO PEDIDOS_PUBLICOS
+      const { data: pedidoPublico, error: pedidoError } = await supabase
+        .from('pedidos_publicos')
+        .insert([{
+          cliente_nome: clienteNome,
+          cliente_email: clienteEmail || null,
+          cliente_telefone: clienteTelefone || null,
+          status: 'enviado_whatsapp',
+          total: totalCarrinho,
+          itens: cart.map(item => ({
+            id: item.id,
+            nome: item.nome,
+            valor: item.valor,
+            quantidade: item.quantidade || 1
+          }))
+        }])
+        .select();
+
+      if (pedidoError) {
+        console.error('ERRO ao salvar pedido público:', pedidoError);
+      } else {
+        console.log('Pedido público salvo com sucesso:', pedidoPublico);
+      }
+
+      const pedidoPublicoId = pedidoPublico && pedidoPublico[0] ? pedidoPublico[0].id : null;
+
+      // 2. CRIAR ORÇAMENTO NO SISTEMA
+      const numeroOrcamento = `PUB-${Date.now().toString(36).toUpperCase()}`;
+      
+      console.log('Tentando criar orçamento com número:', numeroOrcamento);
+      
+      const orcamentoData = {
+        numero_orcamento: numeroOrcamento,
+        cliente_nome: clienteNome,
+        cliente_email: clienteEmail || null,
+        cliente_telefone: clienteTelefone || null,
+        total: totalCarrinho,
+        status: 'pendente',
+        origem: 'publico',
+        pedido_publico_id: pedidoPublicoId,
+        data_criacao: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('Dados do orçamento:', orcamentoData);
+      
+      const { data: orcamento, error: orcamentoError } = await supabase
+        .from('orcamentos')
+        .insert([orcamentoData])
+        .select();
+
+      if (orcamentoError) {
+        console.error('ERRO DETALHADO ao criar orçamento:', orcamentoError);
+        toast.error(`Erro ao criar orçamento: ${orcamentoError.message}`);
+        setEnviando(false);
+        return;
+      }
+      
+      if (!orcamento || orcamento.length === 0) {
+        console.error('Orçamento não retornou dados após inserção');
+        toast.error('Erro ao criar orçamento: nenhum dado retornado');
+        setEnviando(false);
+        return;
+      }
+      
+      const orcamentoId = orcamento[0].id;
+      console.log('Orçamento criado com ID:', orcamentoId);
+
+      // 3. ADICIONAR ITENS AO ORÇAMENTO
+      let itensAdicionados = 0;
+      for (const item of cart) {
+        const itemData = {
+          orcamento_id: orcamentoId,
+          produto_id: item.id,
+          produto_nome: item.nome,
+          produto_descricao: item.descricao || '',
+          quantidade: item.quantidade || 1,
+          preco_unitario: item.valor,
+          preco_total: (item.valor * (item.quantidade || 1)),
+          tipo: item.tipo === 'servico' ? 'servico' : 'produto'
+        };
+        
+        const { error: itemError } = await supabase
+          .from('orcamento_itens')
+          .insert([itemData]);
+
+        if (itemError) {
+          console.error(`Erro ao adicionar item ${item.nome}:`, itemError);
+        } else {
+          itensAdicionados++;
+        }
+      }
+      
+      console.log(`${itensAdicionados} de ${cart.length} itens adicionados ao orçamento`);
+
+      // 4. REGISTRAR CONVERSÃO
+      if (pedidoPublicoId) {
+        const { error: convError } = await supabase
+          .from('pedidos_publicos_convertidos')
+          .insert([{
+            pedido_publico_id: pedidoPublicoId,
+            orcamento_id: orcamentoId,
+            convertido_em: new Date().toISOString()
+          }]);
+        
+        if (convError) {
+          console.error('Erro ao registrar conversão:', convError);
+        } else {
+          console.log('Conversão registrada com sucesso');
+        }
+      }
+
+      toast.success(`Orçamento #${numeroOrcamento} criado! Aguardando aprovação.`);
+      console.log('=== PEDIDO FINALIZADO COM SUCESSO ===');
+
+      // 5. ENVIAR WHATSAPP
       let mensagem = "*SMOKE GARDEN*\n";
-      mensagem += "Mecanica Especializada 2 Tempos\n\n";
+      mensagem += "Mecânica Especializada 2 Tempos\n\n";
       mensagem += "━━━━━━━━━━━━━━━━━━━━\n";
-      mensagem += "NOVO PEDIDO DE ORCAMENTO\n";
+      mensagem += "NOVO PEDIDO DE ORÇAMENTO\n";
       mensagem += "━━━━━━━━━━━━━━━━━━━━\n\n";
       mensagem += `Cliente: ${clienteNome}\n`;
       if (clienteEmail) mensagem += `E-mail: ${clienteEmail}\n`;
@@ -290,33 +406,13 @@ export default function PublicMenu() {
       mensagem += `TOTAL: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCarrinho)}\n`;
       mensagem += "━━━━━━━━━━━━━━━━━━━━\n\n";
       mensagem += `Retirar em:\n${enderecoLoja}\n\n`;
-      mensagem += "_Mensagem automatica - Responder o cliente o mais breve possivel_";
+      mensagem += "_Mensagem automática - Responder o cliente o mais breve possível_";
 
       const mensagemCodificada = encodeURIComponent(mensagem);
       const whatsappUrl = `https://wa.me/${numeroLimpo}?text=${mensagemCodificada}`;
-      
       window.open(whatsappUrl, '_blank');
       
-      try {
-        await supabase
-          .from('pedidos_publicos')
-          .insert([{
-            cliente_nome: clienteNome,
-            cliente_email: clienteEmail || null,
-            cliente_telefone: clienteTelefone || null,
-            status: 'enviado_whatsapp',
-            total: totalCarrinho,
-            itens: cart.map(item => ({
-              id: item.id,
-              nome: item.nome,
-              valor: item.valor,
-              quantidade: item.quantidade || 1
-            }))
-          }]);
-      } catch (dbError) {
-        console.log('Não foi possível salvar no banco');
-      }
-      
+      // 6. LIMPAR CARRINHO
       setCart([]);
       setCartCount(0);
       localStorage.removeItem('public_cart');
@@ -326,10 +422,8 @@ export default function PublicMenu() {
       setShowCart(false);
       forceRerender();
       
-      toast.success('Pedido enviado para o WhatsApp!');
-      
     } catch (error) {
-      console.error('Erro ao enviar pedido:', error);
+      console.error('ERRO GERAL no enviarPedido:', error);
       toast.error('Erro ao enviar pedido. Tente novamente.');
     } finally {
       setEnviando(false);
@@ -342,7 +436,6 @@ export default function PublicMenu() {
       ? produtos 
       : servicos;
 
-  // Estilos comuns
   const cardStyle = {
     backgroundColor: '#2a2a2a',
     borderRadius: '16px',
@@ -368,7 +461,6 @@ export default function PublicMenu() {
 
   return (
     <div key={refreshKey} style={{ backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      {/* Header melhorado */}
       <header style={{ 
         backgroundColor: '#D95A1A', 
         padding: '30px 20px', 
@@ -395,7 +487,6 @@ export default function PublicMenu() {
         )}
       </header>
 
-      {/* Navegação melhorada */}
       <div style={{ 
         backgroundColor: '#2a2a2a', 
         padding: '12px 20px',
@@ -448,7 +539,6 @@ export default function PublicMenu() {
         </button>
       </div>
 
-      {/* Grid de produtos melhorado */}
       <div style={{ padding: '40px 20px', maxWidth: '1280px', margin: '0 auto' }}>
         {itensExibir.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
@@ -528,7 +618,6 @@ export default function PublicMenu() {
         )}
       </div>
 
-      {/* Seção de Avaliações melhorada */}
       <div style={{ backgroundColor: '#2a2a2a', marginTop: '40px', padding: '60px 20px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -721,7 +810,6 @@ export default function PublicMenu() {
         </div>
       </div>
 
-      {/* Modal do Carrinho melhorado */}
       {showCart && (
         <div style={{
           position: 'fixed',
@@ -875,7 +963,6 @@ export default function PublicMenu() {
         </div>
       )}
 
-      {/* Footer melhorado */}
       <footer style={{ backgroundColor: '#0f0f0f', padding: '32px 20px', textAlign: 'center', borderTop: '1px solid #333' }}>
         <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
           © {new Date().getFullYear()} Smoke Garden - Mecânica Especializada 2 Tempos
