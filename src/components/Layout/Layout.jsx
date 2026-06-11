@@ -49,57 +49,32 @@ export default function Layout({ user, onLogout, children }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Configurar notificações push para o admin
+  // Configurar notificações push (versão simplificada)
   useEffect(() => {
-    const setupNotifications = async () => {
-      if (!user) return
-      
-      try {
-        if (!('Notification' in window)) {
-          console.log('Navegador não suporta notificações')
-          return
-        }
-        
-        // Aguarda o OneSignal carregar
-        const initOneSignal = () => {
-          return new Promise((resolve) => {
-            if (window.OneSignalDeferred) {
-              window.OneSignalDeferred.push(resolve)
-            } else {
-              setTimeout(() => resolve(null), 5000)
-            }
-          })
-        }
-        
-        const OneSignal = await initOneSignal()
-        
-        if (OneSignal) {
-          // Método correto: setExternalId
-          try {
-            await OneSignal.setExternalId(user.id)
-            console.log('✅ Usuário vinculado ao OneSignal:', user.id)
-          } catch (err) {
-            console.log('Erro ao vincular usuário:', err)
-          }
-          
-          // Verifica permissão
-          if (Notification.permission === 'granted') {
-            console.log('✅ Notificações push já permitidas')
-          } else if (Notification.permission === 'default') {
-            setTimeout(async () => {
-              const permission = await OneSignal.registerForPushNotifications()
-              if (permission) {
-                console.log('✅ Usuário permitiu notificações')
-              }
-            }, 3000)
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao configurar notificações:', error)
-      }
-    }
+    if (!user) return
     
-    setupNotifications()
+    const timer = setTimeout(() => {
+      if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(async (OneSignal) => {
+          try {
+            await OneSignal.init({
+              appId: "0f70a363-cb11-4ab4-82a9-3941f5e8c358",
+            })
+            
+            if (Notification.permission === 'default') {
+              await OneSignal.registerForPushNotifications()
+              console.log('✅ Pedido de permissão enviado')
+            } else if (Notification.permission === 'granted') {
+              console.log('✅ Notificações já permitidas')
+            }
+          } catch (error) {
+            console.error('Erro no OneSignal:', error)
+          }
+        })
+      }
+    }, 3000)
+    
+    return () => clearTimeout(timer)
   }, [user])
 
   const toggleSidebar = () => {
