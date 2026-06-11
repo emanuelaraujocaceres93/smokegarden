@@ -1,17 +1,39 @@
-﻿<!doctype html>
+﻿<!-- frontend/index.html -->
+<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
-    <link rel="apple-touch-icon" href="/logo.jpeg" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#D95A1A" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Smoke Garden" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href="/logo.jpeg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Smoke Garden - Mecânica Especializada 2 Tempos</title>
+    <meta name="description" content="Mecânica especializada em motores 2 tempos. Orçamentos online, produtos e serviços de qualidade." />
+    
+    <!-- Controle de PWA por domínio -->
+    <script>
+      (function() {
+        const hostname = window.location.hostname;
+        const isPublicDomain = hostname === 'www.smokegarden.com.br' || hostname === 'smokegarden.com.br';
+        
+        if (!isPublicDomain) {
+          // Domínio administrativo (vercel.app) - ativa PWA
+          const link = document.createElement('link');
+          link.rel = 'manifest';
+          link.href = '/manifest.json';
+          document.head.appendChild(link);
+          console.log('✅ PWA ativado para domínio:', hostname);
+        } else {
+          // Domínio público - desativa PWA completamente
+          console.log('🌐 Domínio público - PWA desativado');
+          
+          // Remove qualquer metatag de PWA
+          const themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) themeColor.remove();
+          
+          const appleCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+          if (appleCapable) appleCapable.remove();
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,3 +1,4 @@
+// frontend/src/App.jsx
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -6,7 +7,63 @@ import Login from './pages/auth/Login';
 import Layout from './components/Layout/Layout';
 import PublicMenu from './pages/public/PublicMenu';
 
-// Lazy loading - carrega apenas quando necessário
+// Componente que verifica o domínio e controla o PWA
+function DomainHandler({ children }) {
+  const [isPublicDomain, setIsPublicDomain] = React.useState(false);
+
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    
+    // Verifica se é o domínio público
+    const publicDomains = ['www.smokegarden.com.br', 'smokegarden.com.br'];
+    const isPublic = publicDomains.includes(hostname);
+    
+    setIsPublicDomain(isPublic);
+
+    // Se for domínio público: remove PWA e service workers
+    if (isPublic) {
+      console.log('🌐 Domínio público detectado - PWA desativado');
+      
+      // Remove service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            registration.unregister();
+            console.log('Service Worker removido');
+          });
+        });
+      }
+      
+      // Limpa caches do PWA
+      if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            caches.delete(cacheName);
+            console.log(`Cache removido: ${cacheName}`);
+          });
+        });
+      }
+      
+      // Remove o manifest do PWA se existir
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.remove();
+      }
+    } else {
+      console.log('📱 Domínio administrativo - PWA ativo');
+    }
+  }, []);
+
+  // Se for domínio público, mostra APENAS o PublicMenu
+  if (isPublicDomain) {
+    return <PublicMenu />;
+  }
+
+  // Domínio original (smokegarden.vercel.app) - app completo
+  return children;
+}
+
+// Lazy loading - componentes administrativos
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
 const Stock = lazy(() => import('./pages/stock/Stock'));
 const People = lazy(() => import('./pages/people/People'));
@@ -54,19 +111,24 @@ const PageLoader = () => (
 
 function AppContent() {
   const { user, loading, logout } = useAuth();
-
-  if (window.location.pathname === '/public') {
-    return <PublicMenu />;
-  }
+  const location = window.location;
+  const isPublicRoute = location.pathname === '/public';
 
   if (loading) {
     return <PageLoader />;
   }
 
+  // Se acessar /public diretamente no domínio admin, mostra PublicMenu
+  if (isPublicRoute) {
+    return <PublicMenu />;
+  }
+
+  // Se não está logado, mostra Login
   if (!user) {
     return <Login />;
   }
 
+  // Logado e não é rota pública - mostra app completo
   return (
     <Layout user={user} onLogout={logout}>
       <Suspense fallback={<PageLoader />}>
@@ -105,7 +167,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppContent />
+        <DomainHandler>
+          <AppContent />
+        </DomainHandler>
       </BrowserRouter>
     </AuthProvider>
   );
