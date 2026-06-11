@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { supabase } from '../../lib/supabaseClient'
 import {
   BarChart3,
   Clock3,
@@ -32,14 +33,13 @@ const navigation = [
 
 export default function Layout({ user, onLogout, children }) {
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false) // Começa FECHADO em todos os dispositivos
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const displayEmail = user?.email ?? 'administrador@smoke.com'
 
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth >= 1024
       setIsDesktop(desktop)
-      // Quando redimensionar, mantém o menu fechado
       if (!desktop) {
         setIsSidebarOpen(false)
       }
@@ -49,12 +49,51 @@ export default function Layout({ user, onLogout, children }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Configurar notificações push para o admin
+  useEffect(() => {
+    const setupNotifications = async () => {
+      if (!user) return
+      
+      try {
+        if (!('Notification' in window)) {
+          console.log('Navegador não suporta notificações')
+          return
+        }
+        
+        const waitForOneSignal = () => {
+          return new Promise((resolve) => {
+            if (window.OneSignalDeferred) {
+              window.OneSignalDeferred.push(resolve)
+            } else {
+              setTimeout(() => resolve(null), 3000)
+            }
+          })
+        }
+        
+        const OneSignal = await waitForOneSignal()
+        
+        if (OneSignal && Notification.permission !== 'denied') {
+          await OneSignal.login(user.id)
+          
+          if (Notification.permission === 'granted') {
+            console.log('✅ Notificações push ativadas para admin')
+          } else if (Notification.permission !== 'denied') {
+            OneSignal.showSlidedownPrompt()
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao configurar notificações:', error)
+      }
+    }
+    
+    setupNotifications()
+  }, [user])
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
   }
 
   const closeSidebar = () => {
-    // Fecha o menu em TODOS os dispositivos
     setIsSidebarOpen(false)
   }
 

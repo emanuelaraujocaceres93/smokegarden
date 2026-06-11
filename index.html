@@ -1,5 +1,4 @@
-﻿<!-- frontend/index.html -->
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -33,6 +32,22 @@
           if (appleCapable) appleCapable.remove();
         }
       })();
+    </script>
+    
+    <!-- OneSignal para notificações push -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.init({
+          appId: "0f70a363-cb11-4ab4-82a9-3941f5e8c358",
+          safari_web_id: "",
+          notifyButton: {
+            enable: true,
+          },
+          allowLocalhostAsSecureOrigin: true,
+        });
+      });
     </script>
   </head>
   <body>
