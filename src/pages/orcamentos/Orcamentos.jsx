@@ -308,7 +308,7 @@ export default function Orcamentos() {
                   <td data-label="Data">
                     {orcamento.data_criacao ? new Date(orcamento.data_criacao).toLocaleDateString('pt-BR') : 
                      orcamento.created_at ? new Date(orcamento.created_at).toLocaleDateString('pt-BR') : '-'}
-                   </td>
+                    </td>
                   <td data-label="Total" className="text-right">{formatCurrency(orcamento.total || 0)}</td>
                   <td data-label="Status">
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -317,10 +317,10 @@ export default function Orcamentos() {
                         {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
                       </span>
                     </div>
-                   </td>
+                    </td>
                   <td data-label="Ações" className="actions-cell">
-                    <Link to={`/orcamentos/${orcamento.id}`} className="btn btn-secondary btn-sm">
-                      <Eye size={12} /> Ver
+                    <Link to={`/orcamentos/${orcamento.id}?edit=true`} className="btn btn-secondary btn-sm">
+                      <Eye size={12} /> Editar
                     </Link>
                     <button onClick={() => gerarPDF(orcamento)} className="btn btn-warning btn-sm">
                       <FileText size={12} /> PDF
@@ -330,11 +330,11 @@ export default function Orcamentos() {
                         <CheckCircle size={12} /> {aprovando === orcamento.id ? '...' : 'Aprovar'}
                       </button>
                     )}
-                   </td>
-                 </tr>
+                    </td>
+                </tr>
               ))}
             </tbody>
-           </table>
+          </table>
         )}
       </div>
     </div>
