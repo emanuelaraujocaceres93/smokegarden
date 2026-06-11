@@ -49,7 +49,7 @@ export default function Layout({ user, onLogout, children }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Configurar notificações push para o admin (sem duplicidade)
+  // Configurar notificações push para o admin (VERSÃO FINAL CORRIGIDA)
   useEffect(() => {
     const setupNotifications = async () => {
       if (!user) return
@@ -60,19 +60,40 @@ export default function Layout({ user, onLogout, children }) {
           return
         }
         
-        // Usa o OneSignal já inicializado pelo index.html
-        if (window.OneSignalDeferred) {
-          window.OneSignalDeferred.push(async (OneSignal) => {
-            // Faz login com o ID do usuário
-            await OneSignal.login(user.id)
-            
-            if (Notification.permission === 'granted') {
-              console.log('✅ Notificações push ativadas para admin')
-            } else if (Notification.permission !== 'denied') {
-              // Pede permissão ao usuário
-              await OneSignal.registerForPushNotifications()
+        // Aguarda o OneSignal carregar e inicializar
+        const initOneSignal = () => {
+          return new Promise((resolve) => {
+            if (window.OneSignalDeferred) {
+              window.OneSignalDeferred.push(resolve)
+            } else {
+              setTimeout(() => resolve(null), 5000)
             }
           })
+        }
+        
+        const OneSignal = await initOneSignal()
+        
+        if (OneSignal) {
+          // Define o ID externo do usuário
+          try {
+            await OneSignal.setExternalUserId(user.id)
+            console.log('✅ Usuário vinculado ao OneSignal:', user.id)
+          } catch (err) {
+            console.log('Erro ao vincular usuário:', err)
+          }
+          
+          // Verifica permissão
+          if (Notification.permission === 'granted') {
+            console.log('✅ Notificações push já permitidas')
+          } else if (Notification.permission === 'default') {
+            // Pede permissão após 3 segundos
+            setTimeout(async () => {
+              const permission = await OneSignal.registerForPushNotifications()
+              if (permission) {
+                console.log('✅ Usuário permitiu notificações')
+              }
+            }, 3000)
+          }
         }
       } catch (error) {
         console.error('Erro ao configurar notificações:', error)
@@ -92,6 +113,7 @@ export default function Layout({ user, onLogout, children }) {
 
   return (
     <div className="layout-shell">
+      {/* Botão do menu - visível em todos os dispositivos quando menu está fechado */}
       {!isSidebarOpen && (
         <button className="menu-toggle-btn" onClick={toggleSidebar}>
           <Menu size={20} />
@@ -99,6 +121,7 @@ export default function Layout({ user, onLogout, children }) {
         </button>
       )}
 
+      {/* Sidebar */}
       <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="layout-sidebar-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -151,10 +174,12 @@ export default function Layout({ user, onLogout, children }) {
         </div>
       </aside>
 
+      {/* Overlay para fechar sidebar quando clicar fora */}
       {isSidebarOpen && (
         <div className="layout-overlay" onClick={closeSidebar} />
       )}
 
+      {/* Conteúdo principal */}
       <div className="layout-content">
         <header className="page-header">
           <div>
