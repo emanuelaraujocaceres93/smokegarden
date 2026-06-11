@@ -27,25 +27,57 @@ export default function OrcamentoDetalhes() {
   }, [id])
 
   async function carregarProdutos() {
-    const { data } = await supabase
-      .from('estoque')
-      .select('id, nome, preco_venda, quantidade')
-      .order('nome')
-    setProdutos(data || [])
+    console.log('=== CARREGANDO PRODUTOS DO ESTOQUE ===')
+    try {
+      const { data, error } = await supabase
+        .from('estoque')
+        .select('*')
+        .order('nome', { ascending: true })
+      
+      if (error) {
+        console.error('Erro ao buscar produtos:', error)
+        toast.error('Erro ao carregar produtos do estoque')
+        return
+      }
+      
+      console.log('Produtos encontrados:', data?.length || 0)
+      setProdutos(data || [])
+      
+      if (data?.length === 0) {
+        toast.error('Nenhum produto cadastrado no estoque')
+      }
+    } catch (error) {
+      console.error('Erro:', error)
+      toast.error('Erro ao carregar produtos')
+    }
   }
 
   async function carregarDados() {
     setLoading(true)
     try {
-      const { data: orcamentoData, error } = await supabase.from('orcamentos').select('*').eq('id', id).maybeSingle()
+      const { data: orcamentoData, error } = await supabase
+        .from('orcamentos')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+      
       if (error) throw error
       setOrcamento(orcamentoData)
 
-      const { data: itensData } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', id)
+      // Usando os campos corretos da tabela orcamento_itens
+      const { data: itensData } = await supabase
+        .from('orcamento_itens')
+        .select('*')
+        .eq('orcamento_id', id)
+      
       setItens(itensData || [])
 
       if (orcamentoData?.cliente_id) {
-        const { data: clienteData } = await supabase.from('pessoas').select('*').eq('id', orcamentoData.cliente_id).maybeSingle()
+        const { data: clienteData } = await supabase
+          .from('pessoas')
+          .select('*')
+          .eq('id', orcamentoData.cliente_id)
+          .maybeSingle()
         setCliente(clienteData || null)
       }
     } catch (error) {
@@ -60,12 +92,12 @@ export default function OrcamentoDetalhes() {
     setItens([...itens, {
       id: `novo-${Date.now()}`,
       orcamento_id: id,
-      produto_id: '',
-      descricao: '',
-      tipo_item: 'produto',
+      produto_id: null,
+      produto_nome: '',
       quantidade: 1,
-      valor_unitario: 0,
-      valor_total: 0,
+      preco_unitario: 0,
+      preco_total: 0,
+      tipo: 'produto',
       isNew: true
     }])
   }
@@ -78,37 +110,35 @@ export default function OrcamentoDetalhes() {
       const produto = produtos.find(p => p.id === valor)
       if (produto) {
         item.produto_id = produto.id
-        item.descricao = produto.nome
-        item.valor_unitario = produto.preco_venda || 0
+        item.produto_nome = produto.nome || 'Produto'
+        item.preco_unitario = produto.preco_venda || produto.preco || 0
         item.quantidade = item.quantidade || 1
-        item.valor_total = item.quantidade * item.valor_unitario
+        item.preco_total = item.quantidade * item.preco_unitario
       }
-    } else if (campo === 'descricao') {
-      item.descricao = valor
+    } else if (campo === 'produto_nome') {
+      item.produto_nome = valor
     } else if (campo === 'quantidade') {
       item.quantidade = parseFloat(valor) || 0
-      item.valor_total = item.quantidade * item.valor_unitario
-    } else if (campo === 'valor_unitario') {
-      item.valor_unitario = parseFloat(valor) || 0
-      item.valor_total = item.quantidade * item.valor_unitario
-    } else if (campo === 'tipo_item') {
-      item.tipo_item = valor
+      item.preco_total = item.quantidade * item.preco_unitario
+    } else if (campo === 'preco_unitario') {
+      item.preco_unitario = parseFloat(valor) || 0
+      item.preco_total = item.quantidade * item.preco_unitario
+    } else if (campo === 'tipo') {
+      item.tipo = valor
     }
     
     novosItens[index] = item
     setItens(novosItens)
-    calcularTotal(novosItens)
   }
 
   function removerItem(index) {
     if (!window.confirm('Remover este item?')) return
     const novosItens = itens.filter((_, i) => i !== index)
     setItens(novosItens)
-    calcularTotal(novosItens)
   }
 
-  function calcularTotal(itensList = itens) {
-    const total = itensList.reduce((sum, item) => sum + (item.valor_total || 0), 0)
+  function calcularTotal() {
+    const total = itens.reduce((sum, item) => sum + (item.preco_total || 0), 0)
     return total
   }
 
@@ -118,7 +148,7 @@ export default function OrcamentoDetalhes() {
     setSalvando(true)
     try {
       // Validar itens
-      const itensInvalidos = itens.filter(item => !item.descricao || item.quantidade <= 0)
+      const itensInvalidos = itens.filter(item => !item.produto_nome || item.quantidade <= 0)
       if (itensInvalidos.length > 0) {
         toast.error('Preencha todos os itens corretamente')
         setSalvando(false)
@@ -146,15 +176,16 @@ export default function OrcamentoDetalhes() {
 
       if (deleteError) throw deleteError
 
-      // Inserir itens atualizados
+      // Inserir itens atualizados com os campos corretos
       const itensParaInserir = itens.map(item => ({
         orcamento_id: id,
         produto_id: item.produto_id || null,
-        descricao: item.descricao,
-        tipo_item: item.tipo_item || 'produto',
+        produto_nome: item.produto_nome,
         quantidade: item.quantidade,
-        valor_unitario: item.valor_unitario,
-        valor_total: item.valor_total
+        preco_unitario: item.preco_unitario,
+        preco_total: item.preco_total,
+        tipo: item.tipo || 'produto',
+        created_at: new Date().toISOString()
       }))
 
       const { error: insertError } = await supabase
@@ -165,8 +196,8 @@ export default function OrcamentoDetalhes() {
 
       toast.success('Orçamento atualizado com sucesso!')
       setEditando(false)
-      navigate(`/orcamentos/${id}`) // Remove o ?edit=true
-      carregarDados() // Recarregar dados
+      navigate(`/orcamentos/${id}`)
+      carregarDados()
       
     } catch (error) {
       console.error('Erro ao salvar:', error)
@@ -179,7 +210,7 @@ export default function OrcamentoDetalhes() {
   function cancelarEdicao() {
     setEditando(false)
     navigate(`/orcamentos/${id}`)
-    carregarDados() // Recarregar dados originais
+    carregarDados()
   }
 
   async function excluirOrcamento() {
@@ -231,13 +262,13 @@ export default function OrcamentoDetalhes() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
-        {/* Informações do Cliente - READONLY */}
+        {/* Informações do Cliente */}
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
           <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Cliente</h2>
           <p style={{ color: 'white' }}><strong>{cliente?.nome || orcamento.cliente_nome || 'Cliente avulso'}</strong></p>
-          {cliente?.telefone && <p style={{ color: '#aaa' }}>{cliente.telefone}</p>}
-          {cliente?.email && <p style={{ color: '#aaa' }}>{cliente.email}</p>}
-          {cliente?.documento && <p style={{ color: '#aaa' }}>{cliente.documento}</p>}
+          {(cliente?.telefone || orcamento.cliente_telefone) && <p style={{ color: '#aaa' }}>{cliente?.telefone || orcamento.cliente_telefone}</p>}
+          {(cliente?.email || orcamento.cliente_email) && <p style={{ color: '#aaa' }}>{cliente?.email || orcamento.cliente_email}</p>}
+          {(cliente?.documento) && <p style={{ color: '#aaa' }}>{cliente.documento}</p>}
           {orcamento.observacoes && (
             <>
               <h3 style={{ color: 'white', fontSize: '14px', marginTop: '16px', marginBottom: '8px' }}>Observações</h3>
@@ -272,7 +303,6 @@ export default function OrcamentoDetalhes() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid #333' }}>
                       <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Item</th>
-                      <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Tipo</th>
                       <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Qtd</th>
                       <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Unitário</th>
                       <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Total</th>
@@ -284,52 +314,11 @@ export default function OrcamentoDetalhes() {
                       <tr key={item.id} style={{ borderBottom: '1px solid #333' }}>
                         <td style={{ padding: '12px' }}>
                           {editando ? (
-                            item.produto_id ? (
-                              <select
-                                value={item.produto_id}
-                                onChange={(e) => atualizarItem(index, 'produto_id', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: '#1a1a1a',
-                                  border: '1px solid #444',
-                                  borderRadius: '4px',
-                                  color: 'white'
-                                }}
-                              >
-                                <option value="">Selecione um produto</option>
-                                {produtos.map(produto => (
-                                  <option key={produto.id} value={produto.id}>
-                                    {produto.nome} - {formatCurrency(produto.preco_venda || 0)}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                type="text"
-                                value={item.descricao}
-                                onChange={(e) => atualizarItem(index, 'descricao', e.target.value)}
-                                placeholder="Digite o nome do item"
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: '#1a1a1a',
-                                  border: '1px solid #444',
-                                  borderRadius: '4px',
-                                  color: 'white'
-                                }}
-                              />
-                            )
-                          ) : (
-                            <span style={{ color: 'white' }}>{item.descricao}</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          {editando ? (
                             <select
-                              value={item.tipo_item}
-                              onChange={(e) => atualizarItem(index, 'tipo_item', e.target.value)}
+                              value={item.produto_id || ''}
+                              onChange={(e) => atualizarItem(index, 'produto_id', e.target.value)}
                               style={{
+                                width: '100%',
                                 padding: '8px',
                                 backgroundColor: '#1a1a1a',
                                 border: '1px solid #444',
@@ -337,11 +326,15 @@ export default function OrcamentoDetalhes() {
                                 color: 'white'
                               }}
                             >
-                              <option value="produto">Produto</option>
-                              <option value="servico">Serviço</option>
+                              <option value="">Selecione um produto</option>
+                              {produtos.map(produto => (
+                                <option key={produto.id} value={produto.id}>
+                                  {produto.nome} - {formatCurrency(produto.preco_venda || 0)}
+                                </option>
+                              ))}
                             </select>
                           ) : (
-                            <span style={{ color: '#aaa' }}>{item.tipo_item}</span>
+                            <span style={{ color: 'white' }}>{item.produto_nome}</span>
                           )}
                         </td>
                         <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -370,8 +363,8 @@ export default function OrcamentoDetalhes() {
                           {editando ? (
                             <input
                               type="number"
-                              value={item.valor_unitario}
-                              onChange={(e) => atualizarItem(index, 'valor_unitario', e.target.value)}
+                              value={item.preco_unitario}
+                              onChange={(e) => atualizarItem(index, 'preco_unitario', e.target.value)}
                               min="0"
                               step="0.01"
                               style={{
@@ -385,11 +378,11 @@ export default function OrcamentoDetalhes() {
                               }}
                             />
                           ) : (
-                            <span style={{ color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</span>
+                            <span style={{ color: '#4ade80' }}>{formatCurrency(item.preco_unitario)}</span>
                           )}
                         </td>
                         <td style={{ padding: '12px', textAlign: 'right' }}>
-                          <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(item.valor_total)}</span>
+                          <span style={{ color: 'white', fontWeight: 'bold' }}>{formatCurrency(item.preco_total)}</span>
                         </td>
                         {editando && (
                           <td style={{ padding: '12px', textAlign: 'center' }}>
@@ -412,13 +405,13 @@ export default function OrcamentoDetalhes() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid #444' }}>
-                      <td colSpan={editando ? 4 : 4} style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold', fontSize: '16px' }}>
+                      <td colSpan={editando ? 3 : 3} style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold', fontSize: '16px' }}>
                         TOTAL
                       </td>
                       <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold', fontSize: '18px' }}>
                         {formatCurrency(calcularTotal())}
                       </td>
-                      {editando && <td></td>}
+                      {editando && <td style={{ padding: '12px' }}></td>}
                     </tr>
                   </tfoot>
                 </table>
