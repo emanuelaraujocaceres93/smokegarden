@@ -49,7 +49,7 @@ export default function Layout({ user, onLogout, children }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Configurar notificações push para o admin
+  // Configurar notificações push para o admin (VERSÃO CORRIGIDA)
   useEffect(() => {
     const setupNotifications = async () => {
       if (!user) return
@@ -60,25 +60,34 @@ export default function Layout({ user, onLogout, children }) {
           return
         }
         
+        // Aguarda o OneSignal carregar
         const waitForOneSignal = () => {
           return new Promise((resolve) => {
             if (window.OneSignalDeferred) {
               window.OneSignalDeferred.push(resolve)
             } else {
-              setTimeout(() => resolve(null), 3000)
+              setTimeout(() => resolve(null), 5000)
             }
           })
         }
         
         const OneSignal = await waitForOneSignal()
         
-        if (OneSignal && Notification.permission !== 'denied') {
+        if (OneSignal) {
+          // Inicializa o OneSignal
+          await OneSignal.init({
+            appId: "0f70a363-cb11-4ab4-82a9-3941f5e8c358",
+          })
+          
+          // Login com o ID do usuário
           await OneSignal.login(user.id)
           
+          // Verifica permissão
           if (Notification.permission === 'granted') {
             console.log('✅ Notificações push ativadas para admin')
           } else if (Notification.permission !== 'denied') {
-            OneSignal.showSlidedownPrompt()
+            // Registra para notificações push (pede permissão)
+            await OneSignal.registerForPushNotifications()
           }
         }
       } catch (error) {
