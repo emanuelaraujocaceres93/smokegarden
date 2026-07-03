@@ -26,10 +26,6 @@ export default function NovoOrcamento() {
   const [estoque, setEstoque] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteId, setClienteId] = useState('')
-  const [clienteNome, setClienteNome] = useState('')
-  const [clienteEmail, setClienteEmail] = useState('')
-  const [clienteTelefone, setClienteTelefone] = useState('')
-  const [clienteDocumento, setClienteDocumento] = useState('')
   const [novoCliente, setNovoCliente] = useState('')
   const [novoClienteEmail, setNovoClienteEmail] = useState('')
   const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
@@ -301,8 +297,25 @@ export default function NovoOrcamento() {
           {itens.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum item adicionado.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '500px' : 'auto' }}>
+            // Container da tabela com scroll horizontal
+            <div style={{ 
+              overflowX: 'auto', 
+              WebkitOverflowScrolling: 'touch',
+              width: '100%'
+            }}>
+              <table style={{ 
+                width: '100%', 
+                minWidth: isMobile ? '550px' : 'auto',
+                borderCollapse: 'collapse',
+                tableLayout: 'fixed'
+              }}>
+                <colgroup>
+                  <col style={{ width: '40%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #333' }}>
                     <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Item</th>
@@ -315,14 +328,24 @@ export default function NovoOrcamento() {
                 <tbody>
                   {itens.map((item, index) => (
                     <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
-                      <td style={{ padding: '12px', color: 'white' }}>{item.descricao}</td>
+                      <td style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         <input 
                           type="number" 
                           min="1" 
                           value={item.quantidade} 
                           onChange={(e) => atualizarQuantidade(index, Number(e.target.value) || 1)} 
-                          style={{ width: isMobile ? '50px' : '60px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'center' }}
+                          style={{ 
+                            width: '100%', 
+                            maxWidth: '70px',
+                            padding: '4px', 
+                            backgroundColor: '#333', 
+                            border: '1px solid #444', 
+                            borderRadius: '4px', 
+                            color: 'white', 
+                            textAlign: 'center',
+                            boxSizing: 'border-box'
+                          }}
                         />
                       </td>
                       <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
@@ -330,7 +353,15 @@ export default function NovoOrcamento() {
                       <td style={{ padding: '12px', textAlign: 'center' }}>
                         <button 
                           onClick={() => atualizarQuantidade(index, 0)}
-                          style={{ padding: '4px 8px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          style={{ 
+                            padding: '4px 8px', 
+                            backgroundColor: '#dc2626', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
                         >
                           <Trash2 size={14} /> Remover
                         </button>
@@ -347,21 +378,37 @@ export default function NovoOrcamento() {
                   <tr>
                     <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Desconto:</td>
                     <td colSpan="2" style={{ padding: '12px', textAlign: 'right' }}>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        value={desconto} 
-                        onChange={(e) => setDesconto(Number(e.target.value) || 0)}
-                        style={{ width: isMobile ? '70px' : '100px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'right' }}
-                      />
-                      <select 
-                        value={tipoDesconto} 
-                        onChange={(e) => setTipoDesconto(e.target.value)}
-                        style={{ marginLeft: '8px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white' }}
-                      >
-                        <option value="valor">R$</option>
-                        <option value="percentual">%</option>
-                      </select>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '4px' }}>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value={desconto} 
+                          onChange={(e) => setDesconto(Number(e.target.value) || 0)}
+                          style={{ 
+                            width: '80px', 
+                            padding: '4px', 
+                            backgroundColor: '#333', 
+                            border: '1px solid #444', 
+                            borderRadius: '4px', 
+                            color: 'white', 
+                            textAlign: 'right' 
+                          }}
+                        />
+                        <select 
+                          value={tipoDesconto} 
+                          onChange={(e) => setTipoDesconto(e.target.value)}
+                          style={{ 
+                            padding: '4px', 
+                            backgroundColor: '#333', 
+                            border: '1px solid #444', 
+                            borderRadius: '4px', 
+                            color: 'white' 
+                          }}
+                        >
+                          <option value="valor">R$</option>
+                          <option value="percentual">%</option>
+                        </select>
+                      </div>
                     </td>
                     <td></td>
                   </tr>
@@ -377,7 +424,7 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal de seleção de produtos */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', width: isMobile ? '95%' : '500px', maxWidth: '95%', maxHeight: '80vh', overflow: 'auto' }}>
