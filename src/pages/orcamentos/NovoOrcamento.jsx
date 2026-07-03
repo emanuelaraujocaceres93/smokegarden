@@ -298,17 +298,14 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section - NOVA ABORDAGEM */}
+        {/* Itens Section - usando classe table para responsividade */}
         <div style={{ 
           backgroundColor: '#2a2a2a', 
           padding: '20px', 
           borderRadius: '12px',
-          overflowX: 'auto',           // SCROLL NO PRÓPRIO BLOCO
-          WebkitOverflowScrolling: 'touch',
+          overflow: 'visible',
           width: '100%',
-          minWidth: 0,
-          // Garantir que não haja overflow escondido
-          overflowY: 'visible'
+          minWidth: 0
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
@@ -323,12 +320,10 @@ export default function NovoOrcamento() {
           {itens.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum item adicionado.</div>
           ) : (
-            // REMOVEMOS A DIV INTERNA COM OVERFLOW
-            <table style={{ 
-              width: '100%', 
-              minWidth: isMobile ? '600px' : 'auto',
+            <table className="table" style={{ 
+              width: '100%',
               borderCollapse: 'collapse',
-              // Tabela pode ser maior que o container, o scroll aparece na div pai
+              // Remove minWidth para permitir que a classe table controle a responsividade
             }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #333' }}>
@@ -342,8 +337,8 @@ export default function NovoOrcamento() {
               <tbody>
                 {itens.map((item, index) => (
                   <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
-                    <td style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <td data-label="Item" style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
+                    <td data-label="Qtd" style={{ padding: '12px', textAlign: 'center' }}>
                       <input 
                         type="number" 
                         min="1" 
@@ -362,9 +357,9 @@ export default function NovoOrcamento() {
                         }}
                       />
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <td data-label="Unitário" style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
+                    <td data-label="Total" style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
+                    <td data-label="Ações" style={{ padding: '12px', textAlign: 'center' }}>
                       <button 
                         onClick={() => atualizarQuantidade(index, 0)}
                         style={{ 
