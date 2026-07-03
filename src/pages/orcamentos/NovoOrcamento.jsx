@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
@@ -40,72 +40,79 @@ export default function NovoOrcamento() {
   const [tipoDesconto, setTipoDesconto] = useState('valor')
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const itensBlockRef = useRef(null)
 
-  // Efeito para forçar correção de overflow e largura
+  // Força estilos em todos os pais e no próprio bloco
   useEffect(() => {
-    // Adicionar classe ao body para permitir CSS específico
-    document.body.classList.add('novo-orcamento-page')
+    // 1. Injetar estilos no head para sobrescrever overflow
+    const styleId = 'novo-orcamento-override'
+    let styleEl = document.getElementById(styleId)
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = styleId
+      styleEl.textContent = `
+        .page-main, .layout-content, .layout-shell, #root, body {
+          overflow-x: visible !important;
+          overflow-y: visible !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+        .page-main {
+          padding-left: 16px !important;
+          padding-right: 16px !important;
+        }
+        [data-itens-block] {
+          overflow-x: auto !important;
+          overflow-y: visible !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          flex: 1 1 100% !important;
+        }
+        [data-itens-block] table {
+          min-width: 600px !important;
+          width: 100% !important;
+        }
+        .flex-wrapper {
+          width: 100% !important;
+          flex-wrap: wrap !important;
+        }
+      `
+      document.head.appendChild(styleEl)
+    }
 
-    // Selecionar todos os ancestrais problemáticos e forçar overflow visible
-    const elements = [
+    // 2. Aplicar estilos diretamente via JavaScript (redundante, mas seguro)
+    const elementos = [
       document.querySelector('.page-main'),
       document.querySelector('.layout-content'),
       document.querySelector('.layout-shell'),
       document.getElementById('root'),
       document.body,
     ]
-
-    elements.forEach(el => {
+    elementos.forEach(el => {
       if (el) {
-        el.style.overflowX = 'visible !important'
-        el.style.overflowY = 'visible !important'
-        el.style.maxWidth = '100% !important'
-        el.style.width = '100% !important'
-        el.style.minWidth = '0 !important'
+        el.style.overflowX = 'visible'
+        el.style.overflowY = 'visible'
+        el.style.maxWidth = '100%'
+        el.style.width = '100%'
+        el.style.minWidth = '0'
       }
     })
 
-    // Forçar largura do container principal
-    const container = document.querySelector('div[style*="background-color: rgb(26, 26, 26)"]')
-    if (container) {
-      container.style.width = '100% !important'
-      container.style.maxWidth = '100% !important'
-      container.style.overflow = 'visible !important'
-    }
-
-    // Forçar o bloco de itens a ter overflow auto e largura total
-    const itensBlock = document.querySelector('[data-itens-block]')
-    if (itensBlock) {
-      itensBlock.style.width = '100% !important'
-      itensBlock.style.maxWidth = '100% !important'
-      itensBlock.style.minWidth = '0 !important'
-      itensBlock.style.overflowX = 'auto !important'
-      itensBlock.style.overflowY = 'visible !important'
-      itensBlock.style.flex = '1 1 100% !important'
-    }
-
-    // Forçar a tabela
-    const table = document.querySelector('table')
-    if (table) {
-      table.style.minWidth = isMobile ? '600px' : 'auto'
-      table.style.width = '100% !important'
-      table.style.maxWidth = '100% !important'
+    // 3. Ajustar o bloco de itens
+    if (itensBlockRef.current) {
+      itensBlockRef.current.style.overflowX = 'auto'
+      itensBlockRef.current.style.overflowY = 'visible'
+      itensBlockRef.current.style.width = '100%'
+      itensBlockRef.current.style.maxWidth = '100%'
+      itensBlockRef.current.style.flex = '1 1 100%'
     }
 
     return () => {
-      document.body.classList.remove('novo-orcamento-page')
-      // Restaurar estilos (opcional)
-      elements.forEach(el => {
-        if (el) {
-          el.style.overflowX = ''
-          el.style.overflowY = ''
-          el.style.maxWidth = ''
-          el.style.width = ''
-          el.style.minWidth = ''
-        }
-      })
+      // Remove o estilo injetado ao desmontar (opcional)
+      // document.getElementById(styleId)?.remove()
     }
-  }, [isMobile])
+  }, [])
 
   useEffect(() => {
     carregarDados()
@@ -298,7 +305,7 @@ export default function NovoOrcamento() {
       </div>
 
       {/* Layout FLEX */}
-      <div style={{ 
+      <div className="flex-wrapper" style={{ 
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         gap: '24px',
@@ -377,6 +384,7 @@ export default function NovoOrcamento() {
 
         {/* Itens Section */}
         <div 
+          ref={itensBlockRef}
           data-itens-block
           style={{ 
             backgroundColor: '#2a2a2a', 
