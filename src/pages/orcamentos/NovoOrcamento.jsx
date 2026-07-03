@@ -7,6 +7,19 @@ import toast from 'react-hot-toast'
 const formatCurrency = (value) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(window.matchMedia(query).matches)
+
+  useEffect(() => {
+    const media = window.matchMedia(query)
+    const listener = () => setMatches(media.matches)
+    media.addEventListener('change', listener)
+    return () => media.removeEventListener('change', listener)
+  }, [query])
+
+  return matches
+}
+
 export default function NovoOrcamento() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -26,6 +39,7 @@ export default function NovoOrcamento() {
   const [desconto, setDesconto] = useState(0)
   const [tipoDesconto, setTipoDesconto] = useState('valor')
   const [observacoes, setObservacoes] = useState('')
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
     carregarDados()
@@ -125,7 +139,6 @@ export default function NovoOrcamento() {
     try {
       setLoading(true)
       
-      // Buscar último número de orçamento
       const { data: lastOrcamento } = await supabase
         .from('orcamentos')
         .select('numero_orcamento')
@@ -134,10 +147,8 @@ export default function NovoOrcamento() {
 
       const novoNumero = (lastOrcamento?.[0]?.numero_orcamento || 0) + 1
 
-      // Resolver cliente
       const cliente = await resolveCliente()
 
-      // Inserir orçamento
       const { data: orcamento, error } = await supabase
         .from('orcamentos')
         .insert([{
@@ -163,7 +174,6 @@ export default function NovoOrcamento() {
 
       if (error) throw error
 
-      // Inserir itens do orçamento usando os campos corretos
       const itensData = itens.map((item) => ({
         orcamento_id: orcamento.id,
         produto_id: item.estoque_id,
@@ -179,7 +189,6 @@ export default function NovoOrcamento() {
 
       toast.success(`Orçamento #${novoNumero} criado com sucesso!`)
       
-      // Navegar e forçar recarregamento da página de orçamentos
       navigate('/orcamentos', { replace: true })
       
     } catch (error) {
@@ -191,30 +200,30 @@ export default function NovoOrcamento() {
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div style={{ padding: isMobile ? '12px' : '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ color: 'white', fontSize: '28px', margin: 0 }}>Novo Orçamento</h1>
+          <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Novo Orçamento</h1>
           <p style={{ color: '#888', margin: '5px 0 0' }}>Crie um orçamento com itens do estoque unificado.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button 
             onClick={() => navigate(-1)}
-            style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', flex: isMobile ? '1' : '0' }}
           >
             Cancelar
           </button>
           <button 
             onClick={salvarOrcamento} 
             disabled={loading}
-            style={{ padding: '8px 16px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{ padding: '8px 16px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flex: isMobile ? '1' : '0' }}
           >
             <Save size={16} /> {loading ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', gap: '24px' }}>
         {/* Cliente Section */}
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
           <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Cliente</h2>
@@ -222,13 +231,12 @@ export default function NovoOrcamento() {
           <div style={{ marginBottom: '16px' }}>
             <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Cliente existente</label>
             <select 
-              className="form-select" 
               value={clienteId} 
               onChange={(e) => {
                 setClienteId(e.target.value)
                 setNovoCliente('')
               }}
-              style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white' }}
+              style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: isMobile ? '14px' : '16px' }}
             >
               <option value="">Selecionar depois</option>
               {clientes.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
@@ -280,7 +288,7 @@ export default function NovoOrcamento() {
 
         {/* Itens Section */}
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
             <button 
               onClick={() => setShowModal(true)}
@@ -293,80 +301,78 @@ export default function NovoOrcamento() {
           {itens.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum item adicionado.</div>
           ) : (
-            <>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #333' }}>
-                      <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Item</th>
-                      <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Qtd</th>
-                      <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Unitário</th>
-                      <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Total</th>
-                      <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itens.map((item, index) => (
-                      <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
-                        <td style={{ padding: '12px', color: 'white' }}>{item.descricao}</td>
-                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            value={item.quantidade} 
-                            onChange={(e) => atualizarQuantidade(index, Number(e.target.value) || 1)} 
-                            style={{ width: '60px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'center' }}
-                          />
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
-                        <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
-                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                          <button 
-                            onClick={() => atualizarQuantidade(index, 0)}
-                            style={{ padding: '4px 8px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={14} /> Remover
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop: '2px solid #444' }}>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold' }}>Subtotal:</td>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(subtotal)}</td>
-                      <td></td>
-                    </tr>
-                    <tr>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Desconto:</td>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '500px' : 'auto' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #333' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Item</th>
+                    <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Qtd</th>
+                    <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Unitário</th>
+                    <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Total</th>
+                    <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itens.map((item, index) => (
+                    <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
+                      <td style={{ padding: '12px', color: 'white' }}>{item.descricao}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
                         <input 
                           type="number" 
-                          min="0" 
-                          value={desconto} 
-                          onChange={(e) => setDesconto(Number(e.target.value) || 0)}
-                          style={{ width: '100px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'right' }}
+                          min="1" 
+                          value={item.quantidade} 
+                          onChange={(e) => atualizarQuantidade(index, Number(e.target.value) || 1)} 
+                          style={{ width: isMobile ? '50px' : '60px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'center' }}
                         />
-                        <select 
-                          value={tipoDesconto} 
-                          onChange={(e) => setTipoDesconto(e.target.value)}
-                          style={{ marginLeft: '8px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white' }}
-                        >
-                          <option value="valor">R$</option>
-                          <option value="percentual">%</option>
-                        </select>
                       </td>
-                      <td></td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <button 
+                          onClick={() => atualizarQuantidade(index, 0)}
+                          style={{ padding: '4px 8px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={14} /> Remover
+                        </button>
+                      </td>
                     </tr>
-                    <tr style={{ backgroundColor: '#1f2937' }}>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold', fontSize: '16px' }}>Total:</td>
-                      <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold', fontSize: '18px' }}>{formatCurrency(total)}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid #444' }}>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold' }}>Subtotal:</td>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>{formatCurrency(subtotal)}</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Desconto:</td>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right' }}>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={desconto} 
+                        onChange={(e) => setDesconto(Number(e.target.value) || 0)}
+                        style={{ width: isMobile ? '70px' : '100px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white', textAlign: 'right' }}
+                      />
+                      <select 
+                        value={tipoDesconto} 
+                        onChange={(e) => setTipoDesconto(e.target.value)}
+                        style={{ marginLeft: '8px', padding: '4px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '4px', color: 'white' }}
+                      >
+                        <option value="valor">R$</option>
+                        <option value="percentual">%</option>
+                      </select>
+                    </td>
+                    <td></td>
+                  </tr>
+                  <tr style={{ backgroundColor: '#1f2937' }}>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: 'white', fontWeight: 'bold', fontSize: '16px' }}>Total:</td>
+                    <td colSpan="2" style={{ padding: '12px', textAlign: 'right', color: '#4ade80', fontWeight: 'bold', fontSize: '18px' }}>{formatCurrency(total)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -374,7 +380,7 @@ export default function NovoOrcamento() {
       {/* Modal */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', width: '500px', maxWidth: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+          <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', width: isMobile ? '95%' : '500px', maxWidth: '95%', maxHeight: '80vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #444' }}>
               <h3 style={{ color: 'white', margin: 0 }}>Adicionar item</h3>
               <button onClick={() => setShowModal(false)} style={{ padding: '4px 8px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Fechar</button>

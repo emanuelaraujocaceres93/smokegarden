@@ -14,12 +14,27 @@ function getOrigemBadge(origem) {
   return <span style={{ backgroundColor: '#3A5F40', color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>📋 Interno</span>
 }
 
+// Hook customizado para detectar mobile
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(window.matchMedia(query).matches)
+
+  useEffect(() => {
+    const media = window.matchMedia(query)
+    const listener = () => setMatches(media.matches)
+    media.addEventListener('change', listener)
+    return () => media.removeEventListener('change', listener)
+  }, [query])
+
+  return matches
+}
+
 export default function Orcamentos() {
   const location = useLocation()
   const [orcamentos, setOrcamentos] = useState([])
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [aprovando, setAprovando] = useState(null)
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
     carregarOrcamentos()
@@ -237,7 +252,7 @@ export default function Orcamentos() {
   const clientesMap = useMemo(() => Object.fromEntries(clientes.map((cliente) => [cliente.id, cliente.nome])), [clientes])
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '12px' : '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -246,14 +261,14 @@ export default function Orcamentos() {
       }}>
         <div style={{ 
           display: 'flex', 
-          flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between', 
-          alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
           gap: '16px'
         }}>
           <div>
-            <h1 style={{ color: 'white', fontSize: window.innerWidth <= 768 ? '24px' : '28px', margin: 0 }}>Orçamentos</h1>
-            <p style={{ color: '#888', margin: '5px 0 0', fontSize: window.innerWidth <= 768 ? '13px' : '14px' }}>
+            <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Orçamentos</h1>
+            <p style={{ color: '#888', margin: '5px 0 0', fontSize: isMobile ? '13px' : '14px' }}>
               Gerencie propostas criadas a partir do estoque ou do site público.
             </p>
           </div>
@@ -269,10 +284,10 @@ export default function Orcamentos() {
               textDecoration: 'none', 
               display: 'flex', 
               alignItems: 'center', 
+              justifyContent: 'center',
               gap: '8px',
               fontSize: '14px',
-              width: window.innerWidth <= 768 ? '100%' : 'auto',
-              justifyContent: 'center'
+              width: isMobile ? '100%' : 'auto'
             }}
           >
             <Plus size={16} /> Novo Orçamento
@@ -280,57 +295,60 @@ export default function Orcamentos() {
         </div>
       </div>
 
-      <div className="table-responsive" style={{ 
+      <div style={{ 
         backgroundColor: '#2a2a2a', 
-        borderRadius: '12px'
+        borderRadius: '12px',
+        overflowX: 'auto'
       }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Carregando orçamentos...</div>
         ) : orcamentos.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum orçamento encontrado.</div>
         ) : (
-          <table className="table">
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '600px' : 'auto' }}>
             <thead>
               <tr>
-                <th>Número</th>
-                <th>Cliente</th>
-                <th>Data</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Ações</th>
+                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Número</th>
+                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Cliente</th>
+                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Data</th>
+                <th style={{ padding: '12px', textAlign: 'right', color: '#aaa' }}>Total</th>
+                <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Status</th>
+                <th style={{ padding: '12px', textAlign: 'center', color: '#aaa' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {orcamentos.map((orcamento) => (
-                <tr key={orcamento.id}>
-                  <td data-label="Número">#{orcamento.numero_orcamento || orcamento.id?.slice(0, 8)}</td>
-                  <td data-label="Cliente">{orcamento.cliente_nome || clientesMap[orcamento.cliente_id] || 'Cliente avulso'}</td>
-                  <td data-label="Data">
+                <tr key={orcamento.id} style={{ borderBottom: '1px solid #333' }}>
+                  <td data-label="Número" style={{ padding: '12px', color: 'white' }}>#{orcamento.numero_orcamento || orcamento.id?.slice(0, 8)}</td>
+                  <td data-label="Cliente" style={{ padding: '12px', color: 'white' }}>{orcamento.cliente_nome || clientesMap[orcamento.cliente_id] || 'Cliente avulso'}</td>
+                  <td data-label="Data" style={{ padding: '12px', color: '#ccc' }}>
                     {orcamento.data_criacao ? new Date(orcamento.data_criacao).toLocaleDateString('pt-BR') : 
                      orcamento.created_at ? new Date(orcamento.created_at).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                  <td data-label="Total" className="text-right">{formatCurrency(orcamento.total || 0)}</td>
-                  <td data-label="Status">
+                  </td>
+                  <td data-label="Total" style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(orcamento.total || 0)}</td>
+                  <td data-label="Status" style={{ padding: '12px' }}>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {getOrigemBadge(orcamento.origem)}
-                      <span className={`badge ${orcamento.status === 'aprovado' ? 'badge-success' : 'badge-warning'}`}>
+                      <span className={`badge ${orcamento.status === 'aprovado' ? 'badge-success' : 'badge-warning'}`} style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', backgroundColor: orcamento.status === 'aprovado' ? '#10b981' : '#f59e0b', color: 'white' }}>
                         {orcamento.status === 'aprovado' ? '✓ Aprovado' : '⏳ Pendente'}
                       </span>
                     </div>
-                    </td>
-                  <td data-label="Ações" className="actions-cell">
-                    <Link to={`/orcamentos/${orcamento.id}?edit=true`} className="btn btn-secondary btn-sm">
-                      <Eye size={12} /> Editar
-                    </Link>
-                    <button onClick={() => gerarPDF(orcamento)} className="btn btn-warning btn-sm">
-                      <FileText size={12} /> PDF
-                    </button>
-                    {orcamento.status !== 'aprovado' && (
-                      <button onClick={() => aprovarOrcamento(orcamento)} disabled={aprovando === orcamento.id} className="btn btn-success btn-sm">
-                        <CheckCircle size={12} /> {aprovando === orcamento.id ? '...' : 'Aprovar'}
+                  </td>
+                  <td data-label="Ações" style={{ padding: '12px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <Link to={`/orcamentos/${orcamento.id}?edit=true`} style={{ padding: '6px 12px', backgroundColor: '#4b5563', color: 'white', textDecoration: 'none', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Eye size={12} /> Editar
+                      </Link>
+                      <button onClick={() => gerarPDF(orcamento)} style={{ padding: '6px 12px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <FileText size={12} /> PDF
                       </button>
-                    )}
-                    </td>
+                      {orcamento.status !== 'aprovado' && (
+                        <button onClick={() => aprovarOrcamento(orcamento)} disabled={aprovando === orcamento.id} style={{ padding: '6px 12px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={12} /> {aprovando === orcamento.id ? '...' : 'Aprovar'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
