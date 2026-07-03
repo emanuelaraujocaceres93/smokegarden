@@ -200,14 +200,19 @@ export default function NovoOrcamento() {
   }
 
   return (
-    // Envolvemos tudo em uma div com overflow visível para anular o overflow hidden dos pais
-    <div style={{ overflow: 'visible', width: '100%' }}>
+    // Envolvemos tudo em uma div que força overflow visível e isola do CSS global
+    <div style={{ 
+      overflow: 'visible', 
+      width: '100%',
+      position: 'relative',
+      maxWidth: '100vw'
+    }}>
       <div style={{ 
         padding: isMobile ? '12px' : '24px', 
         backgroundColor: '#1a1a1a', 
         minHeight: '100vh',
-        width: '100%',
-        overflowX: 'visible'
+        overflow: 'visible',
+        width: '100%'
       }}>
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
           <div>
@@ -231,7 +236,13 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', gap: '24px' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', 
+          gap: '24px',
+          overflow: 'visible',
+          width: '100%'
+        }}>
           {/* Cliente Section */}
           <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Cliente</h2>
@@ -299,8 +310,9 @@ export default function NovoOrcamento() {
             backgroundColor: '#2a2a2a', 
             padding: '20px', 
             borderRadius: '12px',
-            overflow: 'visible', // ESSENCIAL para permitir scroll horizontal
-            width: '100%'
+            overflow: 'visible',
+            width: '100%',
+            minWidth: 0
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
@@ -319,8 +331,9 @@ export default function NovoOrcamento() {
                 overflowX: 'auto', 
                 WebkitOverflowScrolling: 'touch',
                 width: '100%',
-                // Garantir que o scroll apareça
-                display: 'block'
+                display: 'block',
+                // Força o scroll mesmo em containers com overflow hidden
+                position: 'relative'
               }}>
                 <table style={{ 
                   width: '100%', 
