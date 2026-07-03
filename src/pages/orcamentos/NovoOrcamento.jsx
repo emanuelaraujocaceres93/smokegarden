@@ -301,21 +301,16 @@ export default function NovoOrcamento() {
             <div style={{ 
               overflowX: 'auto', 
               WebkitOverflowScrolling: 'touch',
-              width: '100%'
+              width: '100%',
+              // Garantir que o conteúdo possa ultrapassar
+              maxWidth: '100%'
             }}>
               <table style={{ 
                 width: '100%', 
-                minWidth: isMobile ? '550px' : 'auto',
+                minWidth: isMobile ? '600px' : 'auto',
                 borderCollapse: 'collapse',
-                tableLayout: 'fixed'
+                // Remover table-layout fixed para que as colunas se ajustem
               }}>
-                <colgroup>
-                  <col style={{ width: '40%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '10%' }} />
-                </colgroup>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #333' }}>
                     <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Item</th>
@@ -329,15 +324,15 @@ export default function NovoOrcamento() {
                   {itens.map((item, index) => (
                     <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
                       <td style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <input 
                           type="number" 
                           min="1" 
                           value={item.quantidade} 
                           onChange={(e) => atualizarQuantidade(index, Number(e.target.value) || 1)} 
                           style={{ 
-                            width: '100%', 
-                            maxWidth: '70px',
+                            width: '70px',
+                            maxWidth: '100%',
                             padding: '4px', 
                             backgroundColor: '#333', 
                             border: '1px solid #444', 
@@ -348,9 +343,9 @@ export default function NovoOrcamento() {
                           }}
                         />
                       </td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80', whiteSpace: 'nowrap' }}>{formatCurrency(item.valor_unitario)}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: 'white', whiteSpace: 'nowrap' }}>{formatCurrency(item.valor_total)}</td>
+                      <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <button 
                           onClick={() => atualizarQuantidade(index, 0)}
                           style={{ 
