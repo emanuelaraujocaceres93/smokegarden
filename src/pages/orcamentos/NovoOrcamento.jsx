@@ -200,7 +200,12 @@ export default function NovoOrcamento() {
   }
 
   return (
-    <div style={{ padding: isMobile ? '12px' : '24px', backgroundColor: '#1a1a1a', minHeight: '100vh', overflowX: 'visible' }}>
+    <div style={{ 
+      padding: isMobile ? '12px' : '24px', 
+      backgroundColor: '#1a1a1a', 
+      minHeight: '100vh',
+      overflowX: 'visible' // Permite que conteúdo com overflow seja visível
+    }}>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Novo Orçamento</h1>
@@ -286,8 +291,13 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section */}
-        <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px', overflow: 'visible' }}>
+        {/* Itens Section - CORRIGIDO */}
+        <div style={{ 
+          backgroundColor: '#2a2a2a', 
+          padding: '20px', 
+          borderRadius: '12px',
+          overflow: 'visible' // ESSENCIAL para permitir scroll horizontal
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
             <button 
@@ -301,20 +311,15 @@ export default function NovoOrcamento() {
           {itens.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum item adicionado.</div>
           ) : (
-            // Container da tabela com scroll horizontal
             <div style={{ 
               overflowX: 'auto', 
               WebkitOverflowScrolling: 'touch',
-              width: '100%',
-              // Removemos maxWidth: 100% e adicionamos:
-              overflowY: 'visible'
+              width: '100%'
             }}>
               <table style={{ 
-                width: '100%',
+                width: '100%', 
                 minWidth: isMobile ? '600px' : 'auto',
-                borderCollapse: 'collapse',
-                // Garantir que a tabela não ultrapasse o container
-                display: 'table'
+                borderCollapse: 'collapse'
               }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #333' }}>
