@@ -41,6 +41,20 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
 
+  // EFEITO PARA PERMITIR OVERFLOW VISÍVEL NOS PAIS
+  useEffect(() => {
+    const pageMain = document.querySelector('.page-main');
+    const layoutContent = document.querySelector('.layout-content');
+    
+    if (pageMain) pageMain.classList.add('overflow-visible');
+    if (layoutContent) layoutContent.classList.add('overflow-visible');
+    
+    return () => {
+      if (pageMain) pageMain.classList.remove('overflow-visible');
+      if (layoutContent) layoutContent.classList.remove('overflow-visible');
+    };
+  }, []);
+
   useEffect(() => {
     carregarDados()
   }, [])
@@ -200,12 +214,10 @@ export default function NovoOrcamento() {
   }
 
   return (
-    // Envolvemos tudo em uma div que força overflow visível e isola do CSS global
     <div style={{ 
       overflow: 'visible', 
       width: '100%',
-      position: 'relative',
-      maxWidth: '100vw'
+      position: 'relative'
     }}>
       <div style={{ 
         padding: isMobile ? '12px' : '24px', 
@@ -305,7 +317,7 @@ export default function NovoOrcamento() {
             </div>
           </div>
 
-          {/* Itens Section - CORRIGIDO */}
+          {/* Itens Section */}
           <div style={{ 
             backgroundColor: '#2a2a2a', 
             padding: '20px', 
@@ -332,7 +344,6 @@ export default function NovoOrcamento() {
                 WebkitOverflowScrolling: 'touch',
                 width: '100%',
                 display: 'block',
-                // Força o scroll mesmo em containers com overflow hidden
                 position: 'relative'
               }}>
                 <table style={{ 

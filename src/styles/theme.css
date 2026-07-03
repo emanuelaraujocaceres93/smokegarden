@@ -767,3 +767,12 @@ img, svg {
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }
+
+/* ===== CORREÇÃO DE OVERFLOW PARA PÁGINAS ESPECÍFICAS ===== */
+.page-main.overflow-visible {
+  overflow-x: visible !important;
+}
+
+.layout-content.overflow-visible {
+  overflow-x: visible !important;
+}
