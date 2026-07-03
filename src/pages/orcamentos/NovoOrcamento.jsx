@@ -41,9 +41,9 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
 
-  // CORREÇÃO DEFINITIVA: FORÇA OVERFLOW VISÍVEL EM TODOS OS PAIS
+  // CORREÇÃO DEFINITIVA: FORÇA LARGURA TOTAL E OVERFLOW VISÍVEL
   useEffect(() => {
-    // Seleciona todos os ancestrais problemáticos
+    // Ajusta todos os ancestrais problemáticos
     const elementos = [
       document.querySelector('.page-main'),
       document.querySelector('.layout-content'),
@@ -57,32 +57,43 @@ export default function NovoOrcamento() {
         el.style.overflowX = 'visible';
         el.style.overflowY = 'visible';
         el.style.maxWidth = '100%';
-        // Remove qualquer restrição de largura
         el.style.width = '100%';
+        // Remove qualquer min-width que possa limitar
+        el.style.minWidth = '0';
       }
     });
 
-    // Também ajusta o container da grid
+    // Ajusta o container da grid
     const grid = document.querySelector('div[style*="grid-template-columns"]');
     if (grid) {
       grid.style.overflow = 'visible';
       grid.style.width = '100%';
+      grid.style.maxWidth = '100%';
+      grid.style.minWidth = '0';
+      // Força a grid a usar todo o espaço
+      grid.style.display = 'grid';
+      // Remove qualquer restrição de largura das colunas
+      grid.style.gridTemplateColumns = isMobile ? '1fr' : '1fr 2fr';
     }
 
-    // E o bloco de itens
+    // Ajusta o bloco de itens (container escuro)
     const itensBlock = document.querySelector('div[style*="background-color: rgb(42, 42, 42)"]');
     if (itensBlock) {
       itensBlock.style.overflowX = 'auto';
       itensBlock.style.overflowY = 'visible';
       itensBlock.style.minWidth = '0';
       itensBlock.style.width = '100%';
+      itensBlock.style.maxWidth = '100%';
+      itensBlock.style.flex = '1 1 auto';
     }
 
-    // E a tabela
+    // Ajusta a tabela
     const table = document.querySelector('table');
     if (table) {
       table.style.minWidth = isMobile ? '600px' : 'auto';
       table.style.width = '100%';
+      table.style.maxWidth = '100%';
+      table.style.tableLayout = 'auto';
     }
 
     return () => {
@@ -93,6 +104,7 @@ export default function NovoOrcamento() {
           el.style.overflowY = '';
           el.style.maxWidth = '';
           el.style.width = '';
+          el.style.minWidth = '';
         }
       });
     };
@@ -291,7 +303,9 @@ export default function NovoOrcamento() {
         gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', 
         gap: '24px',
         overflow: 'visible',
-        width: '100%'
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0
       }}>
         {/* Cliente Section */}
         <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
@@ -364,9 +378,11 @@ export default function NovoOrcamento() {
           overflowY: 'visible',
           WebkitOverflowScrolling: 'touch',
           width: '100%',
+          maxWidth: '100%',
           minWidth: 0,
-          // Força o bloco a ocupar a largura disponível
-          flex: '1 1 auto'
+          flex: '1 1 auto',
+          // Garantir que o bloco ocupe toda a coluna
+          alignSelf: 'stretch'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
@@ -385,8 +401,8 @@ export default function NovoOrcamento() {
               width: '100%', 
               minWidth: isMobile ? '600px' : 'auto',
               borderCollapse: 'collapse',
-              // Garantir que a tabela se expanda
-              tableLayout: 'auto'
+              tableLayout: 'auto',
+              maxWidth: '100%'
             }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #333' }}>
