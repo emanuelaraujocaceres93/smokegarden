@@ -41,64 +41,61 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
 
-  // CORREÇÃO DEFINITIVA: FORÇA LARGURA TOTAL E OVERFLOW VISÍVEL
+  // FORÇA OVERFLOW E LARGURA EM TODOS OS PAIS
   useEffect(() => {
-    // Ajusta todos os ancestrais problemáticos
-    const elementos = [
+    // 1. Liberar overflow de todos os ancestrais
+    const pais = [
       document.querySelector('.page-main'),
       document.querySelector('.layout-content'),
       document.querySelector('.layout-shell'),
       document.getElementById('root'),
       document.body,
     ];
-
-    elementos.forEach(el => {
+    pais.forEach(el => {
       if (el) {
         el.style.overflowX = 'visible';
         el.style.overflowY = 'visible';
         el.style.maxWidth = '100%';
         el.style.width = '100%';
-        // Remove qualquer min-width que possa limitar
         el.style.minWidth = '0';
       }
     });
 
-    // Ajusta o container da grid
-    const grid = document.querySelector('div[style*="grid-template-columns"]');
-    if (grid) {
-      grid.style.overflow = 'visible';
-      grid.style.width = '100%';
-      grid.style.maxWidth = '100%';
-      grid.style.minWidth = '0';
-      // Força a grid a usar todo o espaço
-      grid.style.display = 'grid';
-      // Remove qualquer restrição de largura das colunas
-      grid.style.gridTemplateColumns = isMobile ? '1fr' : '1fr 2fr';
+    // 2. Forçar a largura do container principal
+    const container = document.querySelector('div[style*="background-color: rgb(26, 26, 26)"]');
+    if (container) {
+      container.style.width = '100%';
+      container.style.maxWidth = '100%';
+      container.style.overflow = 'visible';
     }
 
-    // Ajusta o bloco de itens (container escuro)
-    const itensBlock = document.querySelector('div[style*="background-color: rgb(42, 42, 42)"]');
+    // 3. Ajustar o wrapper flex (se existir)
+    const flexWrapper = document.querySelector('.flex-wrapper');
+    if (flexWrapper) {
+      flexWrapper.style.width = '100%';
+      flexWrapper.style.flexWrap = 'wrap';
+    }
+
+    // 4. Forçar o bloco de itens a ter largura total
+    const itensBlock = document.querySelector('[data-itens-block]');
     if (itensBlock) {
+      itensBlock.style.width = '100%';
+      itensBlock.style.minWidth = '0';
+      itensBlock.style.flex = '1 1 100%';
       itensBlock.style.overflowX = 'auto';
       itensBlock.style.overflowY = 'visible';
-      itensBlock.style.minWidth = '0';
-      itensBlock.style.width = '100%';
-      itensBlock.style.maxWidth = '100%';
-      itensBlock.style.flex = '1 1 auto';
     }
 
-    // Ajusta a tabela
+    // 5. Garantir que a tabela tenha min-width
     const table = document.querySelector('table');
     if (table) {
       table.style.minWidth = isMobile ? '600px' : 'auto';
       table.style.width = '100%';
-      table.style.maxWidth = '100%';
-      table.style.tableLayout = 'auto';
     }
 
     return () => {
-      // Restaura os estilos ao desmontar (opcional)
-      elementos.forEach(el => {
+      // Restaura (opcional)
+      pais.forEach(el => {
         if (el) {
           el.style.overflowX = '';
           el.style.overflowY = '';
@@ -274,8 +271,10 @@ export default function NovoOrcamento() {
       backgroundColor: '#1a1a1a', 
       minHeight: '100vh',
       width: '100%',
+      maxWidth: '100%',
       overflow: 'visible'
     }}>
+      {/* Header */}
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Novo Orçamento</h1>
@@ -298,17 +297,24 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
+      {/* Layout FLEX em vez de GRID */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', 
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         gap: '24px',
-        overflow: 'visible',
         width: '100%',
-        maxWidth: '100%',
-        minWidth: 0
+        overflow: 'visible',
+        flexWrap: 'wrap'
       }}>
-        {/* Cliente Section */}
-        <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
+        {/* Cliente Section - ocupa 100% em mobile, 1/3 em desktop */}
+        <div style={{ 
+          backgroundColor: '#2a2a2a', 
+          padding: '20px', 
+          borderRadius: '12px',
+          flex: isMobile ? '1 1 100%' : '0 0 30%',
+          minWidth: isMobile ? '100%' : '250px',
+          overflow: 'visible'
+        }}>
           <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Cliente</h2>
           
           <div style={{ marginBottom: '16px' }}>
@@ -369,21 +375,23 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section - DEFINITIVO */}
-        <div style={{ 
-          backgroundColor: '#2a2a2a', 
-          padding: '20px', 
-          borderRadius: '12px',
-          overflowX: 'auto',
-          overflowY: 'visible',
-          WebkitOverflowScrolling: 'touch',
-          width: '100%',
-          maxWidth: '100%',
-          minWidth: 0,
-          flex: '1 1 auto',
-          // Garantir que o bloco ocupe toda a coluna
-          alignSelf: 'stretch'
-        }}>
+        {/* Itens Section - ocupa o restante */}
+        <div 
+          data-itens-block
+          style={{ 
+            backgroundColor: '#2a2a2a', 
+            padding: '20px', 
+            borderRadius: '12px',
+            flex: isMobile ? '1 1 100%' : '1 1 65%',
+            minWidth: isMobile ? '100%' : '300px',
+            overflowX: 'auto',
+            overflowY: 'visible',
+            WebkitOverflowScrolling: 'touch',
+            // Garantir que ocupe todo o espaço disponível
+            width: '100%',
+            maxWidth: '100%'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
             <button 
@@ -401,8 +409,7 @@ export default function NovoOrcamento() {
               width: '100%', 
               minWidth: isMobile ? '600px' : 'auto',
               borderCollapse: 'collapse',
-              tableLayout: 'auto',
-              maxWidth: '100%'
+              tableLayout: 'auto'
             }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #333' }}>
@@ -511,7 +518,7 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
-      {/* Modal de seleção de produtos */}
+      {/* Modal */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', width: isMobile ? '95%' : '500px', maxWidth: '95%', maxHeight: '80vh', overflow: 'auto' }}>
