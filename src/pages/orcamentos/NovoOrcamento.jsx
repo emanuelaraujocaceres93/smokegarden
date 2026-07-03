@@ -41,6 +41,63 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
 
+  // CORREÇÃO DEFINITIVA: FORÇA OVERFLOW VISÍVEL EM TODOS OS PAIS
+  useEffect(() => {
+    // Seleciona todos os ancestrais problemáticos
+    const elementos = [
+      document.querySelector('.page-main'),
+      document.querySelector('.layout-content'),
+      document.querySelector('.layout-shell'),
+      document.getElementById('root'),
+      document.body,
+    ];
+
+    elementos.forEach(el => {
+      if (el) {
+        el.style.overflowX = 'visible';
+        el.style.overflowY = 'visible';
+        el.style.maxWidth = '100%';
+        // Remove qualquer restrição de largura
+        el.style.width = '100%';
+      }
+    });
+
+    // Também ajusta o container da grid
+    const grid = document.querySelector('div[style*="grid-template-columns"]');
+    if (grid) {
+      grid.style.overflow = 'visible';
+      grid.style.width = '100%';
+    }
+
+    // E o bloco de itens
+    const itensBlock = document.querySelector('div[style*="background-color: rgb(42, 42, 42)"]');
+    if (itensBlock) {
+      itensBlock.style.overflowX = 'auto';
+      itensBlock.style.overflowY = 'visible';
+      itensBlock.style.minWidth = '0';
+      itensBlock.style.width = '100%';
+    }
+
+    // E a tabela
+    const table = document.querySelector('table');
+    if (table) {
+      table.style.minWidth = isMobile ? '600px' : 'auto';
+      table.style.width = '100%';
+    }
+
+    return () => {
+      // Restaura os estilos ao desmontar (opcional)
+      elementos.forEach(el => {
+        if (el) {
+          el.style.overflowX = '';
+          el.style.overflowY = '';
+          el.style.maxWidth = '';
+          el.style.width = '';
+        }
+      });
+    };
+  }, [isMobile]);
+
   useEffect(() => {
     carregarDados()
   }, [])
@@ -204,8 +261,8 @@ export default function NovoOrcamento() {
       padding: isMobile ? '12px' : '24px', 
       backgroundColor: '#1a1a1a', 
       minHeight: '100vh',
-      overflow: 'visible',
-      width: '100%'
+      width: '100%',
+      overflow: 'visible'
     }}>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
@@ -298,14 +355,18 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section - usando classe table para responsividade */}
+        {/* Itens Section - DEFINITIVO */}
         <div style={{ 
           backgroundColor: '#2a2a2a', 
           padding: '20px', 
           borderRadius: '12px',
-          overflow: 'visible',
+          overflowX: 'auto',
+          overflowY: 'visible',
+          WebkitOverflowScrolling: 'touch',
           width: '100%',
-          minWidth: 0
+          minWidth: 0,
+          // Força o bloco a ocupar a largura disponível
+          flex: '1 1 auto'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
@@ -320,10 +381,12 @@ export default function NovoOrcamento() {
           {itens.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Nenhum item adicionado.</div>
           ) : (
-            <table className="table" style={{ 
-              width: '100%',
+            <table style={{ 
+              width: '100%', 
+              minWidth: isMobile ? '600px' : 'auto',
               borderCollapse: 'collapse',
-              // Remove minWidth para permitir que a classe table controle a responsividade
+              // Garantir que a tabela se expanda
+              tableLayout: 'auto'
             }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #333' }}>
@@ -337,8 +400,8 @@ export default function NovoOrcamento() {
               <tbody>
                 {itens.map((item, index) => (
                   <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
-                    <td data-label="Item" style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
-                    <td data-label="Qtd" style={{ padding: '12px', textAlign: 'center' }}>
+                    <td style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
                       <input 
                         type="number" 
                         min="1" 
@@ -357,9 +420,9 @@ export default function NovoOrcamento() {
                         }}
                       />
                     </td>
-                    <td data-label="Unitário" style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
-                    <td data-label="Total" style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
-                    <td data-label="Ações" style={{ padding: '12px', textAlign: 'center' }}>
+                    <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
                       <button 
                         onClick={() => atualizarQuantidade(index, 0)}
                         style={{ 
