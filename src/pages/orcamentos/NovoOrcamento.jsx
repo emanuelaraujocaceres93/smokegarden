@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
@@ -40,79 +40,6 @@ export default function NovoOrcamento() {
   const [tipoDesconto, setTipoDesconto] = useState('valor')
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
-  const itensBlockRef = useRef(null)
-
-  // Força estilos em todos os pais e no próprio bloco
-  useEffect(() => {
-    // 1. Injetar estilos no head para sobrescrever overflow
-    const styleId = 'novo-orcamento-override'
-    let styleEl = document.getElementById(styleId)
-    if (!styleEl) {
-      styleEl = document.createElement('style')
-      styleEl.id = styleId
-      styleEl.textContent = `
-        .page-main, .layout-content, .layout-shell, #root, body {
-          overflow-x: visible !important;
-          overflow-y: visible !important;
-          max-width: 100% !important;
-          width: 100% !important;
-          min-width: 0 !important;
-        }
-        .page-main {
-          padding-left: 16px !important;
-          padding-right: 16px !important;
-        }
-        [data-itens-block] {
-          overflow-x: auto !important;
-          overflow-y: visible !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          flex: 1 1 100% !important;
-        }
-        [data-itens-block] table {
-          min-width: 600px !important;
-          width: 100% !important;
-        }
-        .flex-wrapper {
-          width: 100% !important;
-          flex-wrap: wrap !important;
-        }
-      `
-      document.head.appendChild(styleEl)
-    }
-
-    // 2. Aplicar estilos diretamente via JavaScript (redundante, mas seguro)
-    const elementos = [
-      document.querySelector('.page-main'),
-      document.querySelector('.layout-content'),
-      document.querySelector('.layout-shell'),
-      document.getElementById('root'),
-      document.body,
-    ]
-    elementos.forEach(el => {
-      if (el) {
-        el.style.overflowX = 'visible'
-        el.style.overflowY = 'visible'
-        el.style.maxWidth = '100%'
-        el.style.width = '100%'
-        el.style.minWidth = '0'
-      }
-    })
-
-    // 3. Ajustar o bloco de itens
-    if (itensBlockRef.current) {
-      itensBlockRef.current.style.overflowX = 'auto'
-      itensBlockRef.current.style.overflowY = 'visible'
-      itensBlockRef.current.style.width = '100%'
-      itensBlockRef.current.style.maxWidth = '100%'
-      itensBlockRef.current.style.flex = '1 1 100%'
-    }
-
-    return () => {
-      // Remove o estilo injetado ao desmontar (opcional)
-      // document.getElementById(styleId)?.remove()
-    }
-  }, [])
 
   useEffect(() => {
     carregarDados()
@@ -278,10 +205,8 @@ export default function NovoOrcamento() {
       backgroundColor: '#1a1a1a', 
       minHeight: '100vh',
       width: '100%',
-      maxWidth: '100%',
       overflow: 'visible'
     }}>
-      {/* Header */}
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Novo Orçamento</h1>
@@ -304,24 +229,15 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
-      {/* Layout FLEX */}
-      <div className="flex-wrapper" style={{ 
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', 
         gap: '24px',
-        width: '100%',
         overflow: 'visible',
-        flexWrap: 'wrap'
+        width: '100%'
       }}>
         {/* Cliente Section */}
-        <div style={{ 
-          backgroundColor: '#2a2a2a', 
-          padding: '20px', 
-          borderRadius: '12px',
-          flex: isMobile ? '1 1 100%' : '0 0 30%',
-          minWidth: isMobile ? '100%' : '250px',
-          overflow: 'visible'
-        }}>
+        <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
           <h2 style={{ color: 'white', fontSize: '18px', marginBottom: '16px' }}>Cliente</h2>
           
           <div style={{ marginBottom: '16px' }}>
@@ -382,23 +298,17 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section */}
-        <div 
-          ref={itensBlockRef}
-          data-itens-block
-          style={{ 
-            backgroundColor: '#2a2a2a', 
-            padding: '20px', 
-            borderRadius: '12px',
-            flex: isMobile ? '1 1 100%' : '1 1 65%',
-            minWidth: isMobile ? '100%' : '300px',
-            overflowX: 'auto',
-            overflowY: 'visible',
-            WebkitOverflowScrolling: 'touch',
-            width: '100%',
-            maxWidth: '100%'
-          }}
-        >
+        {/* Itens Section - CORRIGIDO */}
+        <div style={{ 
+          backgroundColor: '#2a2a2a', 
+          padding: '20px', 
+          borderRadius: '12px',
+          overflowX: 'auto',
+          overflowY: 'visible',
+          WebkitOverflowScrolling: 'touch',
+          width: '100%',
+          minWidth: 0
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
             <button 
@@ -525,7 +435,7 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal de seleção de produtos */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#2a2a2a', borderRadius: '12px', width: isMobile ? '95%' : '500px', maxWidth: '95%', maxHeight: '80vh', overflow: 'auto' }}>
