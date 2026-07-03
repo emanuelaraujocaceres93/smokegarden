@@ -26,6 +26,10 @@ export default function NovoOrcamento() {
   const [estoque, setEstoque] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteId, setClienteId] = useState('')
+  const [clienteNome, setClienteNome] = useState('')
+  const [clienteEmail, setClienteEmail] = useState('')
+  const [clienteTelefone, setClienteTelefone] = useState('')
+  const [clienteDocumento, setClienteDocumento] = useState('')
   const [novoCliente, setNovoCliente] = useState('')
   const [novoClienteEmail, setNovoClienteEmail] = useState('')
   const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
@@ -196,7 +200,7 @@ export default function NovoOrcamento() {
   }
 
   return (
-    <div style={{ padding: isMobile ? '12px' : '24px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+    <div style={{ padding: isMobile ? '12px' : '24px', backgroundColor: '#1a1a1a', minHeight: '100vh', overflowX: 'visible' }}>
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ color: 'white', fontSize: isMobile ? '24px' : '28px', margin: 0 }}>Novo Orçamento</h1>
@@ -283,7 +287,7 @@ export default function NovoOrcamento() {
         </div>
 
         {/* Itens Section */}
-        <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px' }}>
+        <div style={{ backgroundColor: '#2a2a2a', padding: '20px', borderRadius: '12px', overflow: 'visible' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ color: 'white', fontSize: '18px', margin: 0 }}>Itens</h2>
             <button 
@@ -302,14 +306,15 @@ export default function NovoOrcamento() {
               overflowX: 'auto', 
               WebkitOverflowScrolling: 'touch',
               width: '100%',
-              // Garantir que o conteúdo possa ultrapassar
-              maxWidth: '100%'
+              // Removemos maxWidth: 100% e adicionamos:
+              overflowY: 'visible'
             }}>
               <table style={{ 
-                width: '100%', 
+                width: '100%',
                 minWidth: isMobile ? '600px' : 'auto',
                 borderCollapse: 'collapse',
-                // Remover table-layout fixed para que as colunas se ajustem
+                // Garantir que a tabela não ultrapasse o container
+                display: 'table'
               }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #333' }}>
@@ -324,7 +329,7 @@ export default function NovoOrcamento() {
                   {itens.map((item, index) => (
                     <tr key={`${item.estoque_id}-${index}`} style={{ borderBottom: '1px solid #333' }}>
                       <td style={{ padding: '12px', color: 'white', wordBreak: 'break-word' }}>{item.descricao}</td>
-                      <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
                         <input 
                           type="number" 
                           min="1" 
@@ -343,9 +348,9 @@ export default function NovoOrcamento() {
                           }}
                         />
                       </td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80', whiteSpace: 'nowrap' }}>{formatCurrency(item.valor_unitario)}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: 'white', whiteSpace: 'nowrap' }}>{formatCurrency(item.valor_total)}</td>
-                      <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
                         <button 
                           onClick={() => atualizarQuantidade(index, 0)}
                           style={{ 
