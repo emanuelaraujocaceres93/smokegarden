@@ -41,71 +41,71 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const isMobile = useMediaQuery('(max-width: 768px)')
 
-  // FORÇA OVERFLOW E LARGURA EM TODOS OS PAIS
+  // Efeito para forçar correção de overflow e largura
   useEffect(() => {
-    // 1. Liberar overflow de todos os ancestrais
-    const pais = [
+    // Adicionar classe ao body para permitir CSS específico
+    document.body.classList.add('novo-orcamento-page')
+
+    // Selecionar todos os ancestrais problemáticos e forçar overflow visible
+    const elements = [
       document.querySelector('.page-main'),
       document.querySelector('.layout-content'),
       document.querySelector('.layout-shell'),
       document.getElementById('root'),
       document.body,
-    ];
-    pais.forEach(el => {
+    ]
+
+    elements.forEach(el => {
       if (el) {
-        el.style.overflowX = 'visible';
-        el.style.overflowY = 'visible';
-        el.style.maxWidth = '100%';
-        el.style.width = '100%';
-        el.style.minWidth = '0';
+        el.style.overflowX = 'visible !important'
+        el.style.overflowY = 'visible !important'
+        el.style.maxWidth = '100% !important'
+        el.style.width = '100% !important'
+        el.style.minWidth = '0 !important'
       }
-    });
+    })
 
-    // 2. Forçar a largura do container principal
-    const container = document.querySelector('div[style*="background-color: rgb(26, 26, 26)"]');
+    // Forçar largura do container principal
+    const container = document.querySelector('div[style*="background-color: rgb(26, 26, 26)"]')
     if (container) {
-      container.style.width = '100%';
-      container.style.maxWidth = '100%';
-      container.style.overflow = 'visible';
+      container.style.width = '100% !important'
+      container.style.maxWidth = '100% !important'
+      container.style.overflow = 'visible !important'
     }
 
-    // 3. Ajustar o wrapper flex (se existir)
-    const flexWrapper = document.querySelector('.flex-wrapper');
-    if (flexWrapper) {
-      flexWrapper.style.width = '100%';
-      flexWrapper.style.flexWrap = 'wrap';
-    }
-
-    // 4. Forçar o bloco de itens a ter largura total
-    const itensBlock = document.querySelector('[data-itens-block]');
+    // Forçar o bloco de itens a ter overflow auto e largura total
+    const itensBlock = document.querySelector('[data-itens-block]')
     if (itensBlock) {
-      itensBlock.style.width = '100%';
-      itensBlock.style.minWidth = '0';
-      itensBlock.style.flex = '1 1 100%';
-      itensBlock.style.overflowX = 'auto';
-      itensBlock.style.overflowY = 'visible';
+      itensBlock.style.width = '100% !important'
+      itensBlock.style.maxWidth = '100% !important'
+      itensBlock.style.minWidth = '0 !important'
+      itensBlock.style.overflowX = 'auto !important'
+      itensBlock.style.overflowY = 'visible !important'
+      itensBlock.style.flex = '1 1 100% !important'
     }
 
-    // 5. Garantir que a tabela tenha min-width
-    const table = document.querySelector('table');
+    // Forçar a tabela
+    const table = document.querySelector('table')
     if (table) {
-      table.style.minWidth = isMobile ? '600px' : 'auto';
-      table.style.width = '100%';
+      table.style.minWidth = isMobile ? '600px' : 'auto'
+      table.style.width = '100% !important'
+      table.style.maxWidth = '100% !important'
     }
 
     return () => {
-      // Restaura (opcional)
-      pais.forEach(el => {
+      document.body.classList.remove('novo-orcamento-page')
+      // Restaurar estilos (opcional)
+      elements.forEach(el => {
         if (el) {
-          el.style.overflowX = '';
-          el.style.overflowY = '';
-          el.style.maxWidth = '';
-          el.style.width = '';
-          el.style.minWidth = '';
+          el.style.overflowX = ''
+          el.style.overflowY = ''
+          el.style.maxWidth = ''
+          el.style.width = ''
+          el.style.minWidth = ''
         }
-      });
-    };
-  }, [isMobile]);
+      })
+    }
+  }, [isMobile])
 
   useEffect(() => {
     carregarDados()
@@ -297,7 +297,7 @@ export default function NovoOrcamento() {
         </div>
       </div>
 
-      {/* Layout FLEX em vez de GRID */}
+      {/* Layout FLEX */}
       <div style={{ 
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
@@ -306,7 +306,7 @@ export default function NovoOrcamento() {
         overflow: 'visible',
         flexWrap: 'wrap'
       }}>
-        {/* Cliente Section - ocupa 100% em mobile, 1/3 em desktop */}
+        {/* Cliente Section */}
         <div style={{ 
           backgroundColor: '#2a2a2a', 
           padding: '20px', 
@@ -375,7 +375,7 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        {/* Itens Section - ocupa o restante */}
+        {/* Itens Section */}
         <div 
           data-itens-block
           style={{ 
@@ -387,7 +387,6 @@ export default function NovoOrcamento() {
             overflowX: 'auto',
             overflowY: 'visible',
             WebkitOverflowScrolling: 'touch',
-            // Garantir que ocupe todo o espaço disponível
             width: '100%',
             maxWidth: '100%'
           }}
