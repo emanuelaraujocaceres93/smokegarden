@@ -19,7 +19,6 @@ export function fixEncodingPlugin() {
     enforce: 'pre',
 
     resolveId(id) {
-      // Não fazer nada neste hook
       return null;
     },
 
@@ -39,7 +38,6 @@ export function fixEncodingPlugin() {
           let content = '';
           let needsFixing = false;
 
-          // Detectar encoding
           if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
             console.log(`  🔄 ${filePath} (UTF-16 LE detectado)`);
             content = buffer.toString('utf16le');
@@ -57,12 +55,10 @@ export function fixEncodingPlugin() {
             continue;
           }
 
-          // Remover BOM se existir
           if (content.charCodeAt(0) === 0xFEFF) {
             content = content.slice(1);
           }
 
-          // Salvar arquivo corrigido
           fs.writeFileSync(fullPath, content, 'utf8');
           console.log(`    ✓ Corrigido!`);
         } catch (err) {

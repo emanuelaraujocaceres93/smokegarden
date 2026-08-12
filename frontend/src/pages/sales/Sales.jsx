@@ -1,445 +1,659 @@
-﻿import React, { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
+import React, { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 
-const Sales = () => {
-  const [products, setProducts] = useState([])
-  const [services, setServices] = useState([])
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
+
+export default function Sales() {
+  const [estoque, setEstoque] = useState([])
+  const [clientes, setClientes] = useState([])
   const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(true)
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('cash')
-  const [installments, setInstallments] = useState(1)
-  const [notes, setNotes] = useState('')
-  const [activeTab, setActiveTab] = useState('products')
+  const [clienteId, setClienteId] = useState('')
+  const [novoCliente, setNovoCliente] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('pix')
+  const [activeType, setActiveType] = useState('produto')
   const [searchTerm, setSearchTerm] = useState('')
+  const [insumo, setInsumo] = useState({ descricao: '', quantidade: 1, valor_unitario: '' })
+  const [novoClienteEmail, setNovoClienteEmail] = useState('')
+  const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
+  const [novoClienteNome, setNovoClienteNome] = useState('')
 
   useEffect(() => {
     fetchData()
   }, [])
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true)
-    
-    const { data: productsData } = await supabase
-      .from('products')
-      .select('*')
-      .order('name')
-    
-    const { data: servicesData } = await supabase
-      .from('services')
-      .select('*')
-      .order('name')
-    
-    setProducts(productsData || [])
-    setServices(servicesData || [])
+    const [{ data: estoqueData, error: estoqueError }, { data: clientesData }] = await Promise.all([
+      supabase.from('estoque').select('*').eq('ativo', true).order('nome'),
+      supabase.from('pessoas').select('*').eq('tipo', 'cliente').order('nome')
+    ])
+
+    if (estoqueError) toast.error('Erro ao carregar estoque')
+    setEstoque(estoqueData || [])
+    setClientes(clientesData || [])
     setLoading(false)
   }
 
-      const addToCart = (item, type) => {
-    const price = type === 'product' ? item.sale_price : item.price
-    const purchasePrice = type === 'product' ? (item.purchase_price || 0) : 0
-    
-    if (type === 'product' && item.quantity <= 0) {
-      toast.error('Produto sem estoque!')
-      return
-    }
-    
-    const existingItem = cart.find(i => i.id === item.id && i.type === type)
-    
-    if (existingItem) {
-      setCart(cart.map(i => 
-        i.id === item.id && i.type === type 
-          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * price }
-          : i
+  const currentItems = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return estoque.filter((item) => {
+      const matchesType = item.tipo === activeType
+      return matchesType && (!term || item.nome.toLowerCase().includes(term))
+    })
+  }, [estoque, activeType, searchTerm])
+
+  const total = cart.reduce((sum, item) => sum + item.valor_total, 0)
+
+  function addToCart(item) {
+    const existing = cart.find((cartItem) => cartItem.estoque_id === item.id)
+    if (existing) {
+      setCart(cart.map((cartItem) =>
+        cartItem.estoque_id === item.id
+          ? { ...cartItem, quantidade: cartItem.quantidade + 1, valor_total: (cartItem.quantidade + 1) * cartItem.valor_unitario }
+          : cartItem
       ))
     } else {
       setCart([...cart, {
-        id: item.id,
-        type: type,
-        name: item.name,
-        price: price,
-        purchase_price: purchasePrice,
-        quantity: 1,
-        subtotal: price
+        tipo_item: item.tipo,
+        estoque_id: item.id,
+        descricao: item.nome,
+        quantidade: 1,
+        valor_unitario: Number(item.valor) || 0,
+        valor_total: Number(item.valor) || 0
       }])
     }
-    toast.success(`${item.name} adicionado!`)
   }
 
-  const removeFromCart = (id, type) => {
-    setCart(cart.filter(i => !(i.id === id && i.type === type)))
-    toast.success('Item removido')
-  }
-
-  const updateQuantity = (id, type, newQuantity) => {
-    if (newQuantity < 1) {
-      removeFromCart(id, type)
+  function updateQuantity(index, quantidade) {
+    if (quantidade <= 0) {
+      setCart(cart.filter((_, itemIndex) => itemIndex !== index))
       return
     }
-    
-    setCart(cart.map(i => 
-      i.id === id && i.type === type 
-        ? { ...i, quantity: newQuantity, subtotal: newQuantity * i.price }
-        : i
+    setCart(cart.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, quantidade, valor_total: quantidade * item.valor_unitario } : item
     ))
   }
 
-  const getTotal = () => {
-    return cart.reduce((sum, item) => sum + item.subtotal, 0)
+  function addInsumo() {
+    if (!insumo.descricao.trim()) return toast.error('Descreva o insumo')
+    const quantidade = Number(insumo.quantidade) || 1
+    const valorUnitario = Number(insumo.valor_unitario) || 0
+    setCart([...cart, {
+      tipo_item: 'insumo',
+      estoque_id: null,
+      descricao: insumo.descricao.trim(),
+      quantidade,
+      valor_unitario: valorUnitario,
+      valor_total: quantidade * valorUnitario
+    }])
+    setInsumo({ descricao: '', quantidade: 1, valor_unitario: '' })
   }
 
-  const getInstallmentValue = () => {
-    const total = getTotal()
-    return installments > 1 ? total / installments : total
-  }
-
-  const finalizeSale = async () => {
-    if (cart.length === 0) {
-      toast.error('Adicione itens ao carrinho!')
-      return
+  async function resolveCliente() {
+    if (clienteId) {
+      const cliente = clientes.find(c => c.id === clienteId)
+      return { id: clienteId, nome: cliente?.nome, email: cliente?.email, telefone: cliente?.telefone }
     }
-
-    const total = getTotal()
-    const isInstallment = paymentMethod === 'installment' && installments > 1
     
-    const saleData = {
-      customer_name: customerName || null,
-      customer_phone: customerPhone || null,
-      total_amount: total,
-      paid_amount: isInstallment ? getInstallmentValue() : total,
-      payment_method: paymentMethod,
-      installment_count: isInstallment ? installments : 1,
-      status: isInstallment ? 'pending' : 'completed',
-      notes: notes || null,
-      created_at: new Date().toISOString()
-    }
-
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert([saleData])
-      .select()
-    
-    if (saleError) {
-      toast.error('Erro: ' + saleError.message)
-      return
-    }
-
-    const saleId = sale[0].id
-
-    for (const item of cart) {
-                  const itemData = {
-        sale_id: saleId,
-        item_type: item.type,
-        item_id: item.id,
-        item_name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        purchase_price: item.purchase_price || 0,
-        subtotal: item.subtotal
-      }
-      
-      await supabase.from('sale_items').insert([itemData])
-      
-      if (item.type === 'product') {
-        const { data: product } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.id)
-          .single()
-        
-        const newQuantity = (product?.quantity || 0) - item.quantity
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity, last_sold_at: new Date().toISOString() })
-          .eq('id', item.id)
-      }
-    }
-
-    if (isInstallment) {
-      const installmentValue = getInstallmentValue()
-      for (let i = 1; i <= installments; i++) {
-        const dueDate = new Date()
-        dueDate.setMonth(dueDate.getMonth() + i)
-        
-        await supabase.from('installments').insert([{
-          sale_id: saleId,
-          installment_number: i,
-          due_date: dueDate.toISOString().split('T')[0],
-          amount: installmentValue,
-          paid_amount: i === 1 ? installmentValue : 0,
-          status: i === 1 ? 'paid' : 'pending'
+    if (novoClienteNome.trim()) {
+      const { data, error } = await supabase
+        .from('pessoas')
+        .insert([{ 
+          tipo: 'cliente', 
+          nome: novoClienteNome.trim(),
+          email: novoClienteEmail || null,
+          telefone: novoClienteTelefone || null
         }])
-      }
+        .select()
+        .single()
+
+      if (error) throw error
+      return { id: data.id, nome: data.nome, email: data.email, telefone: data.telefone }
     }
-
-    toast.success('Venda finalizada!')
-    setCart([])
-    setCustomerName('')
-    setCustomerPhone('')
-    setNotes('')
-    setPaymentMethod('cash')
-    setInstallments(1)
-    fetchData()
+    
+    return { id: null, nome: 'Cliente avulso', email: null, telefone: null }
   }
 
-  const formatCurrency = (value) => {
-    return 'R$ ' + (value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+  async function finalizeSale() {
+    if (cart.length === 0) return toast.error('Adicione itens ao carrinho')
+
+    try {
+      setLoading(true)
+      
+      const cliente = await resolveCliente()
+      const totalVenda = cart.reduce((sum, item) => sum + item.valor_total, 0)
+
+      const { data: venda, error: vendaError } = await supabase
+        .from('vendas')
+        .insert([{
+          cliente_id: cliente.id || null,
+          valor_total: totalVenda,
+          forma_pagamento: paymentMethod,
+          status: 'concluida',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (vendaError) throw vendaError
+
+      if (cart.length > 0) {
+        const itens = cart.map((item) => ({ 
+          venda_id: venda.id, 
+          estoque_id: item.estoque_id,
+          tipo_item: item.tipo_item,
+          descricao: item.descricao,
+          quantidade: item.quantidade,
+          valor_unitario: item.valor_unitario,
+          valor_total: item.valor_total
+        }))
+        
+        const { error: itensError } = await supabase.from('venda_itens').insert(itens)
+        if (itensError) console.error('Erro ao inserir itens:', itensError)
+      }
+
+      toast.success(`Venda finalizada com sucesso!`)
+      setCart([])
+      setClienteId('')
+      setNovoClienteNome('')
+      setNovoClienteEmail('')
+      setNovoClienteTelefone('')
+      
+      fetchData()
+    } catch (error) {
+      console.error('Erro:', error)
+      toast.error(error.message || 'Erro ao finalizar venda')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const getCurrentItems = () => {
-    const items = activeTab === 'products' ? products : services
-    if (!searchTerm) return items
-    return items.filter(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>Carregando...</div>
-  }
-
-  const currentItems = getCurrentItems()
+  if (loading) return <div className="loading-root"><div className="spinner"></div><p>Carregando...</p></div>
 
   return (
-    <div style={{ padding: '16px' }}>
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: '16px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Vendas</h1>
-        <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Selecione produtos ou serviços</p>
+    <div className="sales-container">
+      <div className="sales-header">
+        <h1 className="sales-title">Vendas</h1>
+        <p className="sales-description">Carrinho com produtos, serviços e insumos.</p>
       </div>
 
-      {/* Layout de 2 colunas no desktop, 1 coluna no mobile */}
-      <div style={{
-        display: 'flex',
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-        gap: '16px'
-      }}>
-        
-        {/* Coluna Esquerda: Produtos/Serviços */}
-        <div style={{
-          flex: window.innerWidth < 768 ? 'auto' : 1,
-          backgroundColor: '#1A1A1A',
-          borderRadius: '12px',
-          padding: '16px'
-        }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setActiveTab('products')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'products' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'products' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
+      <div className="sales-grid">
+        {/* Esquerda - Produtos */}
+        <div className="sales-products-panel">
+          <div className="sales-type-buttons">
+            <button 
+              onClick={() => setActiveType('produto')} 
+              className={`sales-type-btn ${activeType === 'produto' ? 'active' : ''}`}
             >
-              📦 Produtos ({products.length})
+              Produtos
             </button>
-            <button
-              onClick={() => setActiveTab('services')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: activeTab === 'services' ? '#3A5F40' : 'transparent',
-                color: activeTab === 'services' ? 'white' : '#E0E0E0',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
+            <button 
+              onClick={() => setActiveType('servico')} 
+              className={`sales-type-btn ${activeType === 'servico' ? 'active' : ''}`}
             >
-              🔧 Serviços ({services.length})
+              Serviços
             </button>
           </div>
-
-          <input
-            type="text"
-            placeholder="Buscar por nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '8px',
-              border: '1px solid #3A5F40',
-              backgroundColor: '#2C2C2C',
-              color: '#E0E0E0',
-              marginBottom: '16px'
-            }}
+          
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            placeholder="Buscar..." 
+            className="sales-search-input"
           />
-
-          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            {currentItems.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>
-                {searchTerm ? 'Nenhum resultado' : `Nenhum ${activeTab === 'products' ? 'produto' : 'serviço'} cadastrado`}
-              </p>
-            ) : (
-              currentItems.map(item => (
-                <div
-                  key={item.id}
-                  style={{
-                    backgroundColor: '#2C2C2C',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginBottom: '10px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}
-                >
-                  <div>
-                    <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                    <p style={{ color: '#D95A1A', fontSize: '14px', margin: '4px 0 0 0' }}>
-                      {formatCurrency(activeTab === 'products' ? item.sale_price : item.price)}
-                    </p>
-                    {activeTab === 'products' && (
-                      <p style={{ color: '#9CA3AF', fontSize: '12px', margin: '4px 0 0 0' }}>
-                        Estoque: {item.quantity || 0}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => addToCart(item, activeTab === 'products' ? 'product' : 'service')}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      backgroundColor: '#3A5F40',
-                      color: 'white',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              ))
-            )}
+          
+          <div className="sales-items-list">
+            {currentItems.map((item) => (
+              <button 
+                key={item.id} 
+                onClick={() => addToCart(item)} 
+                className="sales-item-btn"
+              >
+                <strong>{item.nome}</strong>
+                <small>{formatCurrency(item.valor)}</small>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Coluna Direita: Carrinho */}
-        <div style={{
-          flex: window.innerWidth < 768 ? 'auto' : 0.8,
-          backgroundColor: '#1A1A1A',
-          borderRadius: '12px',
-          padding: '16px',
-          position: window.innerWidth < 768 ? 'static' : 'sticky',
-          top: '16px',
-          maxHeight: window.innerWidth < 768 ? 'auto' : '80vh',
-          overflowY: 'auto'
-        }}>
-          <h3 style={{ color: '#D95A1A', marginBottom: '16px' }}>🛒 Carrinho ({cart.length} itens)</h3>
+        {/* Direita - Carrinho */}
+        <div className="sales-cart-panel">
+          <h2 className="sales-cart-title">Carrinho</h2>
           
-          {cart.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '40px' }}>Carrinho vazio</p>
-          ) : (
+          <div className="sales-form-group">
+            <label>Cliente existente</label>
+            <select 
+              value={clienteId} 
+              onChange={(e) => { setClienteId(e.target.value); setNovoClienteNome('') }} 
+              className="sales-select"
+            >
+              <option value="">Cliente avulso</option>
+              {clientes.map((cliente) => <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>)}
+            </select>
+          </div>
+
+          {!clienteId && (
             <>
-              {cart.map(item => (
-                <div key={`${item.id}-${item.type}`} style={{ backgroundColor: '#2C2C2C', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                    <div>
-                      <p style={{ fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                      <p style={{ color: '#D95A1A', fontSize: '12px', margin: '4px 0 0 0' }}>{formatCurrency(item.price)}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#C62828', color: 'white', cursor: 'pointer' }}>-</button>
-                      <span style={{ minWidth: '25px', textAlign: 'center' }}>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#3A5F40', color: 'white', cursor: 'pointer' }}>+</button>
-                      <button onClick={() => removeFromCart(item.id, item.type)} style={{ padding: '5px 10px', borderRadius: '4px', border: 'none', backgroundColor: 'transparent', color: '#C62828', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  </div>
-                  <p style={{ textAlign: 'right', margin: '8px 0 0 0', color: '#3A5F40', fontSize: '12px' }}>Subtotal: {formatCurrency(item.subtotal)}</p>
-                </div>
-              ))}
-
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '16px' }}>Total:</span>
-                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#D95A1A' }}>{formatCurrency(getTotal())}</span>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Nome do cliente"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
+              <div className="sales-form-group">
+                <label>Novo cliente</label>
+                <input 
+                  type="text" 
+                  value={novoClienteNome} 
+                  onChange={(e) => setNovoClienteNome(e.target.value)} 
+                  placeholder="Nome" 
+                  className="sales-input"
                 />
-
-                <input
-                  type="text"
-                  placeholder="Telefone do cliente"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
+              </div>
+              <div className="sales-form-group">
+                <label>Email</label>
+                <input 
+                  type="email" 
+                  value={novoClienteEmail} 
+                  onChange={(e) => setNovoClienteEmail(e.target.value)} 
+                  placeholder="email@exemplo.com" 
+                  className="sales-input"
                 />
-
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                >
-                  <option value="cash">Dinheiro</option>
-                  <option value="pix">Pix</option>
-                  <option value="card_debit">Cartão Débito</option>
-                  <option value="card_credit">Cartão Crédito</option>
-                  <option value="installment">Parcelado</option>
-                </select>
-
-                {paymentMethod === 'installment' && (
-                  <select
-                    value={installments}
-                    onChange={(e) => setInstallments(Number(e.target.value))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '10px' }}
-                  >
-                    {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                      <option key={n} value={n}>{n}x de {formatCurrency(getInstallmentValue())}</option>
-                    ))}
-                  </select>
-                )}
-
-                <textarea
-                  placeholder="Observações"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows="2"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', marginBottom: '16px', resize: 'vertical' }}
+              </div>
+              <div className="sales-form-group">
+                <label>Telefone</label>
+                <input 
+                  type="text" 
+                  value={novoClienteTelefone} 
+                  onChange={(e) => setNovoClienteTelefone(e.target.value)} 
+                  placeholder="(11) 99999-9999" 
+                  className="sales-input"
                 />
-
-                <button
-                  onClick={finalizeSale}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#3A5F40',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Finalizar Venda
-                </button>
               </div>
             </>
           )}
+
+          <div className="sales-form-group">
+            <label>Forma de pagamento</label>
+            <select 
+              value={paymentMethod} 
+              onChange={(e) => setPaymentMethod(e.target.value)} 
+              className="sales-select"
+            >
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="debito">Cartão débito</option>
+              <option value="credito">Cartão crédito</option>
+            </select>
+          </div>
+
+          {/* Itens do carrinho */}
+          <div className="sales-cart-items">
+            {cart.map((item, index) => (
+              <div key={index} className="sales-cart-item">
+                <div className="sales-cart-item-header">
+                  <strong>{item.descricao}</strong>
+                  <button onClick={() => updateQuantity(index, 0)} className="sales-remove-btn">Remover</button>
+                </div>
+                <div className="sales-cart-item-controls">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={item.quantidade} 
+                    onChange={(e) => updateQuantity(index, Number(e.target.value) || 1)} 
+                    className="sales-quantity-input"
+                  />
+                  <span className="sales-item-total">{formatCurrency(item.valor_total)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Insumo */}
+          <div className="sales-insumo-panel">
+            <h3>Insumo</h3>
+            <input 
+              type="text" 
+              value={insumo.descricao} 
+              onChange={(e) => setInsumo({ ...insumo, descricao: e.target.value })} 
+              placeholder="Descrição" 
+              className="sales-input"
+            />
+            <div className="sales-insumo-controls">
+              <input 
+                type="number" 
+                min="1" 
+                value={insumo.quantidade} 
+                onChange={(e) => setInsumo({ ...insumo, quantidade: e.target.value })} 
+                placeholder="Qtd" 
+                className="sales-insumo-qtd"
+              />
+              <input 
+                type="number" 
+                step="0.01" 
+                value={insumo.valor_unitario} 
+                onChange={(e) => setInsumo({ ...insumo, valor_unitario: e.target.value })} 
+                placeholder="Valor" 
+                className="sales-insumo-valor"
+              />
+              <button onClick={addInsumo} className="sales-insumo-add">+</button>
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="sales-total">
+            <span>Total</span>
+            <span>{formatCurrency(total)}</span>
+          </div>
+
+          <button onClick={finalizeSale} disabled={loading} className="sales-finalize-btn">
+            {loading ? 'Finalizando...' : 'Finalizar Venda'}
+          </button>
         </div>
       </div>
+
+      <style jsx>{`
+        .sales-container {
+          padding: 24px;
+          background-color: #1a1a1a;
+          min-height: 100vh;
+        }
+
+        .sales-header {
+          margin-bottom: 24px;
+        }
+
+        .sales-title {
+          color: white;
+          font-size: 28px;
+          margin: 0;
+        }
+
+        .sales-description {
+          color: #888;
+          margin: 5px 0 0;
+        }
+
+        .sales-grid {
+          display: grid;
+          grid-template-columns: 1fr 400px;
+          gap: 24px;
+        }
+
+        .sales-products-panel {
+          background-color: #2a2a2a;
+          border-radius: 12px;
+          padding: 20px;
+        }
+
+        .sales-type-buttons {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .sales-type-btn {
+          padding: 8px 16px;
+          background-color: #333;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+
+        .sales-type-btn.active {
+          background-color: #2563eb;
+        }
+
+        .sales-search-input {
+          width: 100%;
+          padding: 8px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+          margin-bottom: 16px;
+        }
+
+        .sales-items-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .sales-item-btn {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          cursor: pointer;
+          width: 100%;
+          text-align: left;
+          color: white;
+        }
+
+        .sales-item-btn small {
+          color: #4ade80;
+        }
+
+        .sales-cart-panel {
+          background-color: #2a2a2a;
+          border-radius: 12px;
+          padding: 20px;
+        }
+
+        .sales-cart-title {
+          color: white;
+          font-size: 18px;
+          margin-bottom: 16px;
+        }
+
+        .sales-form-group {
+          margin-bottom: 16px;
+        }
+
+        .sales-form-group label {
+          color: #aaa;
+          display: block;
+          margin-bottom: 5px;
+        }
+
+        .sales-select, .sales-input {
+          width: 100%;
+          padding: 8px;
+          background-color: #333;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+        }
+
+        .sales-cart-items {
+          margin-bottom: 16px;
+        }
+
+        .sales-cart-item {
+          background-color: #333;
+          padding: 12px;
+          border-radius: 8px;
+          margin-bottom: 8px;
+        }
+
+        .sales-cart-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .sales-cart-item-header strong {
+          color: white;
+        }
+
+        .sales-remove-btn {
+          padding: 4px 8px;
+          background-color: #dc2626;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .sales-cart-item-controls {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .sales-quantity-input {
+          width: 80px;
+          padding: 4px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-item-total {
+          color: #4ade80;
+        }
+
+        .sales-insumo-panel {
+          background-color: #333;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 16px;
+        }
+
+        .sales-insumo-panel h3 {
+          color: white;
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+
+        .sales-insumo-controls {
+          display: flex;
+          gap: 8px;
+        }
+
+        .sales-insumo-qtd {
+          width: 60px;
+          padding: 6px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-insumo-valor {
+          flex: 1;
+          padding: 6px;
+          background-color: #1a1a1a;
+          border: 1px solid #444;
+          border-radius: 4px;
+          color: white;
+        }
+
+        .sales-insumo-add {
+          padding: 6px 12px;
+          background-color: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .sales-total {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 1px solid #444;
+          font-weight: bold;
+        }
+
+        .sales-total span:first-child {
+          color: white;
+        }
+
+        .sales-total span:last-child {
+          color: #4ade80;
+          font-size: 20px;
+        }
+
+        .sales-finalize-btn {
+          width: 100%;
+          margin-top: 16px;
+          padding: 12px;
+          background-color: #22c55e;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        .sales-finalize-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+          .sales-container {
+            padding: 16px;
+          }
+
+          .sales-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .sales-title {
+            font-size: 24px;
+          }
+
+          .sales-products-panel,
+          .sales-cart-panel {
+            padding: 16px;
+          }
+
+          .sales-item-btn {
+            padding: 10px;
+          }
+
+          .sales-cart-item-header {
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .sales-insumo-controls {
+            flex-wrap: wrap;
+          }
+
+          .sales-insumo-qtd {
+            width: 80px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .sales-type-buttons {
+            flex-direction: column;
+          }
+
+          .sales-type-btn {
+            width: 100%;
+          }
+
+          .sales-cart-item-controls {
+            flex-wrap: wrap;
+          }
+
+          .sales-quantity-input {
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   )
 }
-
-export default Sales
-
-
-
-

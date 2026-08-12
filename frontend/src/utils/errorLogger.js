@@ -42,10 +42,10 @@ export const clearErrorLogs = () => {
 
 export const exportErrorLogs = () => {
   const logs = getErrorLogs()
-  const dataStr = JSON.stringify(logs, null, 2)
-  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+  const DataStr = JSON.stringify(logs, null, 2)
+  const DataUri = 'Data:application/json;charset=utf-8,'+ encodeURIComponent(DataStr)
   const link = document.createElement('a')
-  link.setAttribute('href', dataUri)
+  link.setAttribute('href', DataUri)
   link.setAttribute('download', `smoke_garden_errors_${new Date().toISOString().split('T')[0]}.json`)
   link.click()
 }

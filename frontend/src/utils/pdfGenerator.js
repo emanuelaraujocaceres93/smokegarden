@@ -57,11 +57,6 @@ async function loadImageAsDataUrl(url) {
 
 export async function generatePDF(orcamento, type = 'orcamento') {
   try {
-    // --- CORREÇÃO: Garantir defaults seguros para desconto ---
-    const orc = { ...orcamento }
-    orc.desconto = orc.desconto !== undefined ? Number(orc.desconto) : 0
-    orc.tipo_desconto = orc.tipo_desconto || 'valor' // 'percentual' ou 'valor'
-    
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
@@ -115,7 +110,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFont('helvetica', 'bold')
     
     const titulo = type === 'orcamento' ? 'ORÇAMENTO' : 'VENDA'
-    const numero = orc.numero_orcamento || orc.numero_venda || orc.id?.slice(0, 8)
+    const numero = orcamento.numero_orcamento || orcamento.numero_venda || orcamento.id?.slice(0, 8)
     doc.text(`${titulo} #${numero}`, pageWidth / 2, y + 3, { align: 'center' })
     
     y += 16
@@ -127,8 +122,8 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     
-    doc.text(`Data de criação: ${formatDate(orc.data_criacao || orc.created_at)}`, 22, y + 3)
-    doc.text(`Validade: ${formatDate(orc.data_validade) || '30 dias'}`, 22, y + 11)
+    doc.text(`Data de criação: ${formatDate(orcamento.data_criacao || orcamento.created_at)}`, 22, y + 3)
+    doc.text(`Validade: ${formatDate(orcamento.data_validade) || '30 dias'}`, 22, y + 11)
     
     y += 22
 
@@ -145,22 +140,22 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     
-    doc.text(`Nome: ${orc.cliente_nome || 'Cliente não informado'}`, 22, y)
+    doc.text(`Nome: ${orcamento.cliente_nome || 'Cliente não informado'}`, 22, y)
     y += 8
     
-    if (orc.cliente_telefone) {
-      doc.text(`Telefone: ${orc.cliente_telefone}`, 22, y)
+    if (orcamento.cliente_telefone) {
+      doc.text(`Telefone: ${orcamento.cliente_telefone}`, 22, y)
       y += 8
     }
-    if (orc.cliente_email) {
-      doc.text(`E-mail: ${orc.cliente_email}`, 22, y)
+    if (orcamento.cliente_email) {
+      doc.text(`E-mail: ${orcamento.cliente_email}`, 22, y)
       y += 8
     }
     
     y += 10
 
     // Preparar itens para a tabela
-    const itens = orc.itens || []
+    const itens = orcamento.itens || []
     
     const tableBody = itens.map(item => {
       const nome = item.nome || item.produto_nome || item.descricao || item.nome_produto || 'Produto'
@@ -213,18 +208,15 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       return sum + val
     }, 0)
     
-    const desconto = orc.desconto
-    const total = (orc.total || subtotal) - desconto
+    const desconto = orcamento.desconto || 0
+    const total = (orcamento.total || subtotal) - desconto
 
     const totalX = pageWidth - 50
     
-    // SÓ mostra Subtotal se houver desconto OU se o campo total for diferente do subtotal
+    // SÓ mostra Subtotal se houver desconto
     let currentY = finalY
     
-    // CORREÇÃO: Sempre mostrar subtotal, mas desconto só se houver valor
-    const temDesconto = desconto > 0
-    
-    if (temDesconto) {
+    if (desconto > 0) {
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(100, 100, 100)
@@ -237,21 +229,12 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       doc.setTextColor(100, 100, 100)
       doc.text('Desconto:', totalX - 35, currentY)
       doc.setTextColor(220, 38, 38)
-      const descontoText = orc.tipo_desconto === 'percentual' ? `${desconto}%` : formatCurrency(desconto)
+      const descontoText = orcamento.tipo_desconto === 'percentual' ? `${desconto}%` : formatCurrency(desconto)
       doc.text(`- ${descontoText}`, totalX, currentY)
-      currentY += 8
-    } else {
-      // Mesmo sem desconto, mostrar subtotal para transparência
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(100, 100, 100)
-      doc.text('Subtotal:', totalX - 35, currentY)
-      doc.setTextColor(60, 60, 60)
-      doc.text(formatCurrency(subtotal), totalX, currentY)
       currentY += 8
     }
     
-    // Linha separadora
+    // Linha separadora (só se houver desconto, ou sempre para destacar)
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
     doc.line(totalX - 45, currentY - 3, pageWidth - 15, currentY - 3)
@@ -265,7 +248,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     
     currentY += 20
 
-    if (orc.observacoes) {
+    if (orcamento.observacoes) {
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(60, 60, 60)
@@ -273,7 +256,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       currentY += 6
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
-      const splitObs = doc.splitTextToSize(orc.observacoes, pageWidth - 30)
+      const splitObs = doc.splitTextToSize(orcamento.observacoes, pageWidth - 30)
       doc.text(splitObs, 15, currentY)
     }
 
@@ -289,8 +272,8 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.text('Este documento é uma proposta comercial.', pageWidth / 2, footerY + 3, { align: 'center' })
 
     const nomeArquivo = type === 'orcamento' 
-      ? `orcamento_${orc.numero_orcamento || Date.now()}.pdf`
-      : `venda_${orc.numero_venda || Date.now()}.pdf`
+      ? `orcamento_${orcamento.numero_orcamento || Date.now()}.pdf`
+      : `venda_${orcamento.numero_venda || Date.now()}.pdf`
     
     doc.save(nomeArquivo)
     
