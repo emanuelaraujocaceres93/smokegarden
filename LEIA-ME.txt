@@ -1,0 +1,96 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    🔧 CORREÇÃO DE ERRO UTF-8 VITE                           ║
+║                          Smoke Garden Frontend                               ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ❌ PROBLEMA                                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Build falhou com erro:                                                     │
+│  "stream did not contain valid UTF-8"                                       │
+│                                                                              │
+│  Arquivos afetados:                                                         │
+│  • src/pages/dashboard/Dashboard.jsx                                        │
+│  • src/pages/accounts/Accounts.jsx                                          │
+│                                                                              │
+│  Causa: Arquivos salvos com encoding UTF-16 LE em vez de UTF-8             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ✅ SOLUÇÃO (Automática)                                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Criei um plugin Vite que corrige automaticamente!                          │
+│                                                                              │
+│  📂 Arquivos criados/modificados:                                           │
+│  ├─ fix-encoding-plugin.js ........... Plugin de correção                   │
+│  ├─ vite-new.config.js .............. Config limpa sem BOM                 │
+│  ├─ install-fix.js .................. Script de instalação                 │
+│  ├─ INSTALAR_CORRECAO.bat ........... Instalador Windows (clique!)         │
+│  ├─ fix-jsx-encoding.js ............. Corretor manual alternativo          │
+│  └─ UTF8_FIX_INSTRUCTIONS.md ........ Instruções detalhadas               │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 PASSO-A-PASSO (RECOMENDADO)                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  OPÇÃO 1: Automático (Mais fácil)                                           │
+│  ─────────────────────────────────                                          │
+│  1. Clique 2x em: INSTALAR_CORRECAO.bat                                     │
+│  2. O script fará tudo automaticamente                                      │
+│  3. Vá para o passo "Testar Build"                                          │
+│                                                                              │
+│  OPÇÃO 2: Manual                                                            │
+│  ────────────────                                                           │
+│  1. Abra um terminal nesta pasta                                            │
+│  2. Execute: node install-fix.js                                            │
+│  3. Vá para o passo "Testar Build"                                          │
+│                                                                              │
+│  OPÇÃO 3: Substituição simples                                              │
+│  ──────────────────────────────                                             │
+│  1. Delete: frontend\vite.config.js                                         │
+│  2. Renomeie: vite-new.config.js → vite.config.js                          │
+│  3. Vá para o passo "Testar Build"                                          │
+│                                                                              │
+│  🧪 Testar Build                                                            │
+│  ─────────────────                                                          │
+│  1. Terminal > abra em: frontend                                            │
+│  2. Execute: npm run build                                                  │
+│  3. ✓ Se funcionar, erro resolvido!                                        │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🛡️  O QUE O PLUGIN FAZ                                                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  • Detecta automaticamente arquivos com encoding inválido                   │
+│  • Converte de UTF-16 LE/BE para UTF-8 puro                                │
+│  • Remove BOM (Byte Order Mark) inválido                                    │
+│  • Executa ANTES de cada build                                             │
+│  • Não afeta arquivos já em UTF-8 correto                                   │
+│  • Trabalha silenciosamente (sem quebra de funcionalidade)                  │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 💡 DICAS IMPORTANTES                                                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ✓ Nenhum código será perdido                                               │
+│  ✓ Todos os arquivos têm backup automático                                  │
+│  ✓ O plugin roda a cada build (segurança)                                   │
+│  ✓ Compatível com todo o workflow Git                                       │
+│                                                                              │
+│  Se tiver dúvidas, veja: UTF8_FIX_INSTRUCTIONS.md                           │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+                    👉 Recomendado: INSTALAR_CORRECAO.bat
+

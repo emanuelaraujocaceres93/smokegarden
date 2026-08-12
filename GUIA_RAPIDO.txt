@@ -1,0 +1,114 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║             ✅ SOLUÇÃO PARA ERRO UTF-8 - SMOKE GARDEN FRONTEND            ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+🎯 OBJETIVO
+───────────
+Corrigir: "stream did not contain valid UTF-8"
+Arquivos: Dashboard.jsx, Accounts.jsx
+
+📦 ENTREGÁVEIS
+──────────────
+
+✅ Plugin Automático (instalado)
+   • fix-encoding-plugin.js
+   • vite.config.js (atualizado)
+   
+✅ Instaladores (escolha um)
+   • INSTALAR_CORRECAO.bat       ← Clique 2x (RECOMENDADO)
+   • INSTALAR_CORRECAO.vbs       ← Windows alternativo
+   • install-fix.js              ← Terminal: node install-fix.js
+   • install-fix.sh              ← Linux/Mac
+
+✅ Validadores
+   • validate-fix.js             ← Verifica se funcionou
+   
+✅ Documentação
+   • UTF8_FIX_INSTRUCTIONS.md    ← Completa
+   • SOLUCAO_RESUMO.md           ← Resumida
+   • LEIA-ME.txt                 ← Visual
+
+🚀 INÍCIO RÁPIDO (Recomendado)
+────────────────────────────────
+
+1️⃣  Clique 2x em: INSTALAR_CORRECAO.bat
+    (Ou execute: node install-fix.js)
+
+2️⃣  Terminal → abra em "frontend"
+
+3️⃣  Execute: npm run build
+
+4️⃣  Sucesso! ✓
+
+⏱️  TEMPO: ~1-2 minutos
+
+✨ BENEFÍCIOS
+─────────────
+
+✓ Automático - Uma vez instalado, nunca mais problema
+✓ Silencioso - Roda no background sem atrapalhar
+✓ Seguro - Backup automático de tudo
+✓ Reversível - Pode desfazer facilmente
+✓ Compatível - Windows, Mac, Linux
+✓ Código preservado - Nada é perdido
+
+💡 COMO FUNCIONA
+────────────────
+
+O plugin:
+1. Detecta encoding inválido nos JSX
+2. Converte UTF-16 LE → UTF-8
+3. Remove BOM inválido
+4. Salva arquivo corrigido
+5. Seu build roda normalmente
+
+Tudo 100% automático!
+
+🤔 DÚVIDAS COMUNS
+─────────────────
+
+P: Vou perder meu código?
+R: Não! Apenas mudar o encoding.
+
+P: Preciso fazer algo especial?
+R: Não! Clique no .bat e pronto.
+
+P: Posso usar sem o plugin?
+R: Sim, mas vai corrigir apenas uma vez.
+   Com o plugin, está sempre protegido.
+
+P: Quanto tempo leva?
+R: 30 segundos no máximo.
+
+P: É seguro?
+R: 100%. Backup automático de tudo.
+
+🎯 PRÓXIMOS PASSOS
+──────────────────
+
+Depois que o build rodar com sucesso:
+
+1. Configure seu editor para UTF-8 sem BOM:
+   • VS Code: settings.json → "files.encoding": "utf8"
+   • Sublime: View → Line Endings → Unix
+
+2. (Opcional) Configure um Git hook para evitar recorrência
+
+3. Aproveite o desenvolvimento! 🚀
+
+📞 SUPORTE
+──────────
+
+Se algo não funcionar:
+
+1. Verifique: node --version (precisa de Node.js)
+2. Execute: node validate-fix.js
+3. Veja: UTF8_FIX_INSTRUCTIONS.md
+
+═══════════════════════════════════════════════════════════════════════════
+
+                    👉 Comece por: INSTALAR_CORRECAO.bat
+
+═══════════════════════════════════════════════════════════════════════════
