@@ -295,7 +295,21 @@ export default function PublicMenu() {
       const pedidoPublicoId = pedidoPublico && pedidoPublico[0] ? pedidoPublico[0].id : null;
 
       // 2. CRIAR ORÇAMENTO NO SISTEMA
-      const numeroOrcamento = `PUB-${Date.now().toString(36).toUpperCase()}`;
+      // Numeração: PUB-YYYYNN (ex: PUB-202601, PUB-202602...)
+      const anoPub = new Date().getFullYear()
+      const prefixoPub = `PUB-${anoPub}`
+      
+      const { data: lastPub } = await supabase
+        .from('orcamentos')
+        .select('numero_orcamento')
+        .like('numero_orcamento', `${prefixoPub}%`)
+        .order('numero_orcamento', { ascending: false })
+        .limit(1)
+      
+      const ultimoSeqPub = lastPub?.[0]?.numero_orcamento
+        ? parseInt(String(lastPub[0].numero_orcamento).slice(-2)) || 0
+        : 0
+      const numeroOrcamento = `${prefixoPub}${String(ultimoSeqPub + 1).padStart(2, '0')}`
       
       console.log('Tentando criar orçamento com número:', numeroOrcamento);
       

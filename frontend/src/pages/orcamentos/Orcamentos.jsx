@@ -129,7 +129,21 @@ export default function Orcamentos() {
         }
       }
       
-      const numeroVenda = `VENDA-${Date.now().toString(36).toUpperCase()}`
+      // Numeração: VENDA-YYYYNN
+      const anoVenda = new Date().getFullYear()
+      const prefixoVenda = `VENDA-${anoVenda}`
+      
+      const { data: lastVenda } = await supabase
+        .from('vendas')
+        .select('numero_venda')
+        .like('numero_venda', `${prefixoVenda}%`)
+        .order('numero_venda', { ascending: false })
+        .limit(1)
+      
+      const ultimoSeqVenda = lastVenda?.[0]?.numero_venda
+        ? parseInt(String(lastVenda[0].numero_venda).slice(-2)) || 0
+        : 0
+      const numeroVenda = `${prefixoVenda}${String(ultimoSeqVenda + 1).padStart(2, '0')}`
       
       const { data: venda, error: vendaError } = await supabase
         .from('vendas')

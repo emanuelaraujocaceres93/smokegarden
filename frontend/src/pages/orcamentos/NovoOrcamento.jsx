@@ -139,13 +139,21 @@ export default function NovoOrcamento() {
     try {
       setLoading(true)
       
+      // Numeração: YYYYNN (ex: 202601, 202602, 202701...)
+      const ano = new Date().getFullYear()
+      const prefixo = ano.toString()
+      
       const { data: lastOrcamento } = await supabase
         .from('orcamentos')
         .select('numero_orcamento')
+        .like('numero_orcamento', `${prefixo}%`)
         .order('numero_orcamento', { ascending: false })
         .limit(1)
 
-      const novoNumero = (lastOrcamento?.[0]?.numero_orcamento || 0) + 1
+      const ultimoSequencial = lastOrcamento?.[0]?.numero_orcamento
+        ? parseInt(String(lastOrcamento[0].numero_orcamento).slice(-2)) || 0
+        : 0
+      const novoNumero = `${prefixo}${String(ultimoSequencial + 1).padStart(2, '0')}`
 
       const cliente = await resolveCliente()
 
