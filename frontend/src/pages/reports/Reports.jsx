@@ -31,7 +31,7 @@ export default function Reports() {
     try {
       const [{ data: vendasData, error: vendasError }, { data: itensData }, { data: clientesData }] = await Promise.all([
         supabase.from('vendas').select('*').gte('created_at', start.toISOString()).order('created_at', { ascending: false }),
-        supabase.from('itens_venda').select('*'),
+        supabase.from('venda_itens').select('*'),
         supabase.from('pessoas').select('id,nome')
       ])
       if (vendasError) throw vendasError
