@@ -209,7 +209,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     }, 0)
     
     const desconto = orcamento.desconto || 0
-    const total = (orcamento.total || subtotal) - desconto
+    const total = orcamento.total || subtotal
 
     const totalX = pageWidth - 50
     
