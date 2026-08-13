@@ -10,6 +10,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['logo.jpeg', 'favicon.ico'],
+      cleanupOutdatedCaches: true,
       manifest: {
         name: 'Smoke Garden - Mecânica 2 Tempos',
         short_name: 'Smoke Garden',
@@ -28,8 +29,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/assets\//],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,ico,jpeg,jpg,png}'],
+        globIgnores: ['**/sw.js', '**/workbox-*.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*$/i,
