@@ -39,6 +39,22 @@ export default function NovoOrcamento() {
   const [desconto, setDesconto] = useState(0)
   const [tipoDesconto, setTipoDesconto] = useState('valor')
   const [observacoes, setObservacoes] = useState('')
+  const [dataEmissao, setDataEmissao] = useState('')
+  const [dataVencimento, setDataVencimento] = useState('')
+
+  // Inicializa datas padrão se ainda não definidas pelo usuário
+  useEffect(() => {
+    if (!dataEmissao) {
+      const hoje = new Date()
+      setDataEmissao(hoje.toISOString().split('T')[0])
+    }
+    if (!dataVencimento) {
+      const venc = new Date()
+      venc.setDate(venc.getDate() + 30)
+      setDataVencimento(venc.toISOString().split('T')[0])
+    }
+  }, [])
+
   const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
@@ -166,8 +182,8 @@ export default function NovoOrcamento() {
           cliente_email: cliente.email || novoClienteEmail || null,
           cliente_telefone: cliente.telefone || novoClienteTelefone || null,
           cliente_documento: cliente.documento || null,
-          data_criacao: new Date().toISOString(),
-          data_validade: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          data_criacao: dataEmissao ? new Date(dataEmissao + 'T00:00:00').toISOString() : new Date().toISOString(),
+          data_validade: dataVencimento ? new Date(dataVencimento + 'T00:00:00').toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           status: 'rascunho',
           subtotal: subtotal,
           desconto: desconto,
@@ -303,6 +319,28 @@ export default function NovoOrcamento() {
               onChange={(e) => setObservacoes(e.target.value)} 
               placeholder="Observações do orçamento..."
             />
+          </div>
+
+          {/* Datas do orçamento */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Data de emissão</label>
+              <input
+                type="date"
+                value={dataEmissao}
+                onChange={(e) => setDataEmissao(e.target.value)}
+                style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: isMobile ? '14px' : '16px' }}
+              />
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Data de vencimento</label>
+              <input
+                type="date"
+                value={dataVencimento}
+                onChange={(e) => setDataVencimento(e.target.value)}
+                style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: isMobile ? '14px' : '16px' }}
+              />
+            </div>
           </div>
         </div>
 

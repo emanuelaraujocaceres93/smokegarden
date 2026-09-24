@@ -97,8 +97,8 @@ export const orcamentoPDF = ({ orcamento, itens = [], empresa = {} }) => (
 
       <View style={styles.section}>
         <Text style={styles.label}>DADOS DO ORÇAMENTO</Text>
-        <Text style={styles.value}>Criação: {new Date(orcamento.created_at).toLocaleDateString('pt-BR')}</Text>
-        <Text style={styles.value}>Validade: {orcamento.valid_until ? new Date(orcamento.valid_until).toLocaleDateString('pt-BR') : '30 dias'}</Text>
+        <Text style={styles.value}>Criação: {new Date(orcamento.data_criacao || orcamento.created_at).toLocaleDateString('pt-BR')}</Text>
+        <Text style={styles.value}>Validade: {orcamento.data_validade ? new Date(orcamento.data_validade).toLocaleDateString('pt-BR') : '30 dias'}</Text>
         <Text style={styles.value}>Status: {orcamento.status === 'aprovado' ? 'APROVADO' : orcamento.status === 'recusado' ? 'RECUSADO' : 'RASCUNHO'}</Text>
       </View>
 

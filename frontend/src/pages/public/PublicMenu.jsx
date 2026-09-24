@@ -323,6 +323,7 @@ export default function PublicMenu() {
         origem: 'publico',
         pedido_publico_id: pedidoPublicoId,
         data_criacao: new Date().toISOString(),
+        data_validade: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         created_at: new Date().toISOString()
       };
       
