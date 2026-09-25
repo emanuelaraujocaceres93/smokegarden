@@ -41,6 +41,8 @@ export default function NovoOrcamento() {
   const [observacoes, setObservacoes] = useState('')
   const [dataEmissao, setDataEmissao] = useState('')
   const [dataVencimento, setDataVencimento] = useState('')
+  const [empresas, setEmpresas] = useState([])
+  const [empresaId, setEmpresaId] = useState('')
 
   // Inicializa datas padrão se ainda não definidas pelo usuário
   useEffect(() => {
@@ -59,7 +61,14 @@ export default function NovoOrcamento() {
 
   useEffect(() => {
     carregarDados()
+    carregarEmpresas()
   }, [])
+
+  async function carregarEmpresas() {
+    const { data } = await supabase.from('configuracoes').select('id, nome_empresa').order('nome_empresa', { ascending: true })
+    setEmpresas(data || [])
+    if (data && data.length > 0) setEmpresaId(data[0].id)
+  }
 
   async function carregarDados() {
     const [{ data: estoqueData }, { data: clientesData }] = await Promise.all([
@@ -185,6 +194,7 @@ export default function NovoOrcamento() {
           data_criacao: dataEmissao ? new Date(dataEmissao + 'T00:00:00').toISOString() : new Date().toISOString(),
           data_validade: dataVencimento ? new Date(dataVencimento + 'T00:00:00').toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           status: 'rascunho',
+          empresa_config_id: empresaId || null,
           subtotal: subtotal,
           desconto: desconto,
           tipo_desconto: tipoDesconto,
@@ -319,6 +329,21 @@ export default function NovoOrcamento() {
               onChange={(e) => setObservacoes(e.target.value)} 
               placeholder="Observações do orçamento..."
             />
+          </div>
+
+          {/* Empresa */}
+          <div style={{ marginBottom: '12px', marginTop: '8px' }}>
+            <label style={{ color: '#aaa', display: 'block', marginBottom: '5px' }}>Empresa</label>
+            <select
+              value={empresaId}
+              onChange={(e) => setEmpresaId(e.target.value)}
+              style={{ width: '100%', padding: '8px', backgroundColor: '#333', border: '1px solid #444', borderRadius: '8px', color: 'white', fontSize: isMobile ? '14px' : '16px' }}
+            >
+              <option value="">Selecione a empresa</option>
+              {empresas.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.nome_empresa || 'Sem nome'}</option>
+              ))}
+            </select>
           </div>
 
           {/* Datas do orçamento */}

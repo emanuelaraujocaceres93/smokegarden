@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import PageHeader from '../../components/ui/PageHeader'
 
 const emptyConfig = {
+  nome_empresa: '',
   whatsapp_admin: '',
   endereco_loja: '',
   logo_url: '',
@@ -21,28 +22,34 @@ export default function Settings() {
   const [uploading, setUploading] = useState(false)
   const [configId, setConfigId] = useState(null)
   const [form, setForm] = useState(emptyConfig)
+  const [empresas, setEmpresas] = useState([])
+  const [novaEmpresa, setNovaEmpresa] = useState('')
 
   useEffect(() => {
-    fetchConfig()
+    fetchConfigs()
   }, [])
 
-  async function fetchConfig() {
+  async function fetchConfigs() {
     setLoading(true)
     try {
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-      
+        .select('id, nome_empresa, logo_url')
+        .order('nome_empresa', { ascending: true })
+
       if (error) {
         console.error('Erro ao carregar:', error)
         toast.error('Erro ao carregar configurações')
       }
-      
-      if (data) {
-        setConfigId(data.id)
-        setForm({ ...emptyConfig, ...data })
+
+      setEmpresas(data || [])
+
+      if (data && data.length > 0) {
+        const primeira = data[0]
+        await carregarEmpresa(primeira.id)
+      } else {
+        setForm(emptyConfig)
+        setConfigId(null)
       }
     } catch (error) {
       console.error('Erro:', error)
@@ -52,33 +59,50 @@ export default function Settings() {
     }
   }
 
+  async function carregarEmpresa(id) {
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Erro ao carregar empresa:', error)
+    }
+
+    if (data) {
+      setConfigId(data.id)
+      setForm({ ...emptyConfig, ...data })
+    }
+  }
+
   async function uploadLogo(file) {
     if (!file) return
     if (!file?.type?.startsWith('image/')) {
       toast.error('Selecione uma imagem válida (JPG, PNG, GIF)')
       return
     }
-    
+
     setUploading(true)
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `logo-${Date.now()}.${fileExt}`
-      
+
       const { error: uploadError } = await supabase.storage
         .from('logos')
         .upload(fileName, file, { upsert: true })
-      
+
       if (uploadError) throw uploadError
-      
+
       const { data: publicUrlData } = supabase.storage
         .from('logos')
         .getPublicUrl(fileName)
-      
-      setForm((current) => ({ 
-        ...current, 
-        logo_url: publicUrlData.publicUrl 
+
+      setForm((current) => ({
+        ...current,
+        logo_url: publicUrlData.publicUrl
       }))
-      
+
       toast.success('Logo enviada com sucesso!')
     } catch (error) {
       console.error('Erro no upload:', error)
@@ -92,9 +116,52 @@ export default function Settings() {
     }
   }
 
+  async function handleNovaEmpresa() {
+    if (!novaEmpresa.trim()) {
+      toast.error('Digite o nome da empresa')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        nome_empresa: novaEmpresa.trim(),
+        whatsapp_admin: '',
+        endereco_loja: '',
+        logo_url: null,
+        chave_pix: '',
+        banco_nome: null,
+        banco_codigo: null,
+        conta_agencia: null,
+        conta_numero: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .insert([payload])
+        .select()
+        .single()
+
+      if (error) throw error
+      toast.success('Empresa criada com sucesso!')
+      setNovaEmpresa('')
+      await fetchConfigs()
+      if (data?.id) await carregarEmpresa(data.id)
+    } catch (error) {
+      console.error('Erro ao criar empresa:', error)
+      toast.error(error.message || 'Erro ao criar empresa')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
-    
+
+    if (!form.nome_empresa?.trim()) {
+      toast.error('Nome da empresa é obrigatório')
+      return
+    }
     if (!form.whatsapp_admin.trim()) {
       toast.error('WhatsApp Admin é obrigatório')
       return
@@ -107,10 +174,11 @@ export default function Settings() {
       toast.error('Chave PIX é obrigatória')
       return
     }
-    
+
     setSaving(true)
 
     const payload = {
+      nome_empresa: form.nome_empresa.trim(),
       whatsapp_admin: form.whatsapp_admin.trim(),
       endereco_loja: form.endereco_loja.trim(),
       logo_url: form.logo_url?.trim() || null,
@@ -124,7 +192,7 @@ export default function Settings() {
 
     try {
       let result
-      
+
       if (configId) {
         result = await supabase
           .from('configuracoes')
@@ -142,14 +210,13 @@ export default function Settings() {
       }
 
       if (result.error) throw result.error
-      
+
       if (result.data?.id) {
         setConfigId(result.data.id)
       }
-      
+
       toast.success('Configurações salvas com sucesso!')
-      await fetchConfig()
-      
+      await fetchConfigs()
     } catch (error) {
       console.error('Erro ao salvar:', error)
       toast.error(error.message || 'Erro ao salvar configurações')
@@ -174,21 +241,76 @@ export default function Settings() {
 
   return (
     <div className="p-4 md:p-6">
-      <PageHeader 
-        title="Configurações da Loja" 
-        description="Configure WhatsApp, endereço, logo, PIX e dados bancários." 
+      <PageHeader
+        title="Configurações da Loja"
+        description="Configure WhatsApp, endereço, logo, PIX e dados bancários. Cada empresa tem seus próprios dados."
       />
 
+      {/* Lista e criação de empresas */}
+      <div style={{ maxWidth: 820, margin: '0 auto', marginBottom: '24px' }}>
+        <div style={{ backgroundColor: '#2a2a2a', padding: '16px', borderRadius: '12px', border: '1px solid #333' }}>
+          <h3 style={{ color: '#fff', margin: '0 0 12px', fontSize: '16px' }}>Empresas Cadastradas</h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            {empresas.map((emp) => (
+              <button
+                key={emp.id}
+                type="button"
+                onClick={() => carregarEmpresa(emp.id)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #444',
+                  backgroundColor: configId === emp.id ? '#D95A1A' : '#333',
+                  color: configId === emp.id ? '#fff' : '#ccc',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                {emp.nome_empresa || 'Sem nome'}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={novaEmpresa}
+              onChange={(e) => setNovaEmpresa(e.target.value)}
+              placeholder="Nome da nova empresa"
+              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', flex: 1, minWidth: '200px' }}
+            />
+            <button
+              type="button"
+              onClick={handleNovaEmpresa}
+              disabled={saving || !novaEmpresa.trim()}
+              style={{ padding: '8px 16px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              + Nova Empresa
+            </button>
+          </div>
+        </div>
+      </div>
+
       <form className="panel" onSubmit={handleSubmit} style={{ maxWidth: 820, margin: '0 auto' }}>
+        <div className="form-group" style={{ marginBottom: '16px' }}>
+          <label>Nome da Empresa *</label>
+          <input
+            className="form-input"
+            value={form.nome_empresa || ''}
+            onChange={(e) => handleChange('nome_empresa', e.target.value)}
+            placeholder="Ex: Smoke Garden - Cabreúva"
+            required
+          />
+        </div>
+
         <div className="form-group">
           <label>WhatsApp Admin (com DDD) *</label>
-          <input 
-            className="form-input" 
-            type="tel" 
-            value={form.whatsapp_admin} 
-            onChange={(e) => handleChange('whatsapp_admin', e.target.value)} 
-            placeholder="5511999999999" 
-            required 
+          <input
+            className="form-input"
+            type="tel"
+            value={form.whatsapp_admin}
+            onChange={(e) => handleChange('whatsapp_admin', e.target.value)}
+            placeholder="5511999999999"
+            required
           />
           <small style={{ color: '#666', fontSize: '12px' }}>
             Número que receberá os pedidos via WhatsApp
@@ -197,13 +319,13 @@ export default function Settings() {
 
         <div className="form-group">
           <label>Endereço da Loja *</label>
-          <textarea 
-            className="form-textarea" 
-            rows="3" 
-            value={form.endereco_loja} 
-            onChange={(e) => handleChange('endereco_loja', e.target.value)} 
+          <textarea
+            className="form-textarea"
+            rows="3"
+            value={form.endereco_loja}
+            onChange={(e) => handleChange('endereco_loja', e.target.value)}
             placeholder="R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023"
-            required 
+            required
           />
           <small style={{ color: '#666', fontSize: '12px' }}>
             Endereço que aparecerá no site e nos pedidos
@@ -215,10 +337,7 @@ export default function Settings() {
           <div
             className="logo-dropzone"
             onClick={() => fileRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-            }}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
             onDrop={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -241,10 +360,10 @@ export default function Settings() {
             {uploading ? (
               <span>Enviando logo...</span>
             ) : form.logo_url ? (
-              <img 
-                src={form.logo_url} 
-                alt="Logo" 
-                style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain' }} 
+              <img
+                src={form.logo_url}
+                alt="Logo"
+                style={{ maxWidth: '200px', maxHeight: '100px', objectFit: 'contain' }}
               />
             ) : (
               <span style={{ color: '#999' }}>
@@ -252,12 +371,12 @@ export default function Settings() {
               </span>
             )}
           </div>
-          <input 
-            ref={fileRef} 
-            type="file" 
-            accept="image/*" 
-            hidden 
-            onChange={(e) => uploadLogo(e.target.files?.[0])} 
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => uploadLogo(e.target.files?.[0])}
           />
         </div>
 
@@ -268,65 +387,65 @@ export default function Settings() {
 
           <div className="form-group">
             <label>Chave PIX (CPF/CNPJ) *</label>
-            <input 
-              className="form-input" 
-              value={form.chave_pix} 
-              onChange={(e) => handleChange('chave_pix', e.target.value)} 
-              placeholder="12345678909" 
-              required 
+            <input
+              className="form-input"
+              value={form.chave_pix}
+              onChange={(e) => handleChange('chave_pix', e.target.value)}
+              placeholder="12345678909"
+              required
             />
           </div>
 
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px' 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px'
           }}>
             <div className="form-group">
               <label>Nome do Banco</label>
-              <input 
-                className="form-input" 
-                value={form.banco_nome || ''} 
-                onChange={(e) => handleChange('banco_nome', e.target.value)} 
-                placeholder="Banco do Brasil" 
+              <input
+                className="form-input"
+                value={form.banco_nome || ''}
+                onChange={(e) => handleChange('banco_nome', e.target.value)}
+                placeholder="Banco do Brasil"
               />
             </div>
             <div className="form-group">
               <label>Código do Banco</label>
-              <input 
-                className="form-input" 
-                value={form.banco_codigo || ''} 
-                onChange={(e) => handleChange('banco_codigo', e.target.value)} 
-                placeholder="001" 
+              <input
+                className="form-input"
+                value={form.banco_codigo || ''}
+                onChange={(e) => handleChange('banco_codigo', e.target.value)}
+                placeholder="001"
               />
             </div>
             <div className="form-group">
               <label>Agência</label>
-              <input 
-                className="form-input" 
-                value={form.conta_agencia || ''} 
-                onChange={(e) => handleChange('conta_agencia', e.target.value)} 
-                placeholder="1234-5" 
+              <input
+                className="form-input"
+                value={form.conta_agencia || ''}
+                onChange={(e) => handleChange('conta_agencia', e.target.value)}
+                placeholder="1234-5"
               />
             </div>
             <div className="form-group">
               <label>Conta Corrente</label>
-              <input 
-                className="form-input" 
-                value={form.conta_numero || ''} 
-                onChange={(e) => handleChange('conta_numero', e.target.value)} 
-                placeholder="123456-7" 
+              <input
+                className="form-input"
+                value={form.conta_numero || ''}
+                onChange={(e) => handleChange('conta_numero', e.target.value)}
+                placeholder="123456-7"
               />
             </div>
           </div>
         </div>
 
-        <button 
-          className="btn btn-primary btn-lg" 
-          type="submit" 
-          disabled={saving || uploading} 
-          style={{ 
-            width: '100%', 
+        <button
+          className="btn btn-primary btn-lg"
+          type="submit"
+          disabled={saving || uploading}
+          style={{
+            width: '100%',
             marginTop: '24px',
             backgroundColor: '#D95A1A',
             padding: '12px',

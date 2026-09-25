@@ -14,28 +14,24 @@ const formatDate = (date) => {
 let cachedLogoUrl = null
 let logoPromise = null
 
-async function getLogoUrl() {
-  if (cachedLogoUrl) return cachedLogoUrl
-  if (logoPromise) return logoPromise
-  
-  logoPromise = (async () => {
-    try {
-      const { data, error } = await supabase
-        .from('configuracoes')
-        .select('logo_url')
-        .limit(1)
-        .maybeSingle()
-      
-      if (error) throw error
-      cachedLogoUrl = data?.logo_url || null
-      return cachedLogoUrl
-    } catch (err) {
-      console.log('Erro ao buscar logo:', err)
-      return null
-    }
-  })()
-  
-  return logoPromise
+async function getLogoUrl(configId) {
+  if (!configId) {
+    // Padrão: primeira empresa
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('logo_url')
+      .limit(1)
+      .maybeSingle()
+    if (error) { console.log('Erro ao buscar logo padrão:', error); return null }
+    return data?.logo_url || null
+  }
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('logo_url, nome_empresa, endereco_loja, whatsapp_admin')
+    .eq('id', configId)
+    .maybeSingle()
+  if (error) { console.log('Erro ao buscar logo empresa:', error); return null }
+  return data?.logo_url || null
 }
 
 async function loadImageAsDataUrl(url) {
@@ -62,6 +58,27 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
 
+    // Buscar dados da empresa selecionada
+    let empresaDados = null
+    if (orcamento.empresa_config_id) {
+      const { data } = await supabase
+        .from('configuracoes')
+        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin')
+        .eq('id', orcamento.empresa_config_id)
+        .maybeSingle()
+      empresaDados = data
+    }
+
+    // Se não tem empresa específica, buscar padrão (primeira)
+    if (!empresaDados) {
+      const { data } = await supabase
+        .from('configuracoes')
+        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin')
+        .limit(1)
+        .maybeSingle()
+      empresaDados = data
+    }
+
     // ===== CABEÇALHO =====
     doc.setFillColor(217, 90, 26)
     doc.rect(0, 0, pageWidth, 5, 'F')
@@ -72,8 +89,8 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
     y = 30
 
-    // Tentar adicionar o logo
-    const logoUrl = await getLogoUrl()
+    // Tentar adicionar o logo (da empresa ou padrão)
+    const logoUrl = empresaDados?.logo_url || await getLogoUrl()
 
     if (logoUrl) {
       try {
@@ -126,6 +143,20 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.text(`Validade: ${formatDate(orcamento.data_validade) || '30 dias'}`, 22, y + 11)
     
     y += 22
+
+    // Dados da Empresa (se disponível)
+    if (empresaDados) {
+      doc.setFillColor(245, 245, 245)
+      doc.roundedRect(15, y - 4, pageWidth - 30, 28, 3, 3, 'F')
+      doc.setTextColor(60, 60, 60)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`EMPRESA: ${empresaDados.nome_empresa || '—'}`, 22, y + 2)
+      doc.setFont('helvetica', 'normal')
+      if (empresaDados.endereco_loja) doc.text(empresaDados.endereco_loja, 22, y + 10)
+      if (empresaDados.whatsapp_admin) doc.text(`WhatsApp: ${empresaDados.whatsapp_admin}`, 22, y + 16)
+      y += 32
+    }
 
     // Dados do Cliente
     doc.setFillColor(60, 60, 60)

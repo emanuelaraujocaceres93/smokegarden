@@ -125,6 +125,11 @@ export const orcamentoPDF = ({ orcamento, itens = [], empresa = {} }) => (
         </Text>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.label}>DADOS DA EMPRESA</Text>
+        <Text style={styles.value}>Nome: {empresa?.nome || orcamento.empresa_nome || 'Smoke Garden - Mecânica 2 Tempos'}</Text>
+      </View>
+
       {orcamento.observacoes && (
         <View style={[styles.section, { marginTop: 20 }]}>
           <Text style={styles.label}>OBSERVAÇÕES</Text>
