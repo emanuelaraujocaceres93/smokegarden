@@ -34,7 +34,7 @@ export default function Settings() {
     try {
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('id, nome_empresa, logo_url')
+        .select('id, nome_empresa, logo_url, whatsapp_admin, endereco_loja, chave_pix, banco_nome, banco_codigo, conta_agencia, conta_numero')
         .order('nome_empresa', { ascending: true })
 
       if (error) {
