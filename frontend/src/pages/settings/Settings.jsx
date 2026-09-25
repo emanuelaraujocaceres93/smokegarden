@@ -23,7 +23,7 @@ export default function Settings() {
   const [configId, setConfigId] = useState(null)
   const [form, setForm] = useState(emptyConfig)
   const [empresas, setEmpresas] = useState([])
-  const [novaEmpresa, setNovaEmpresa] = useState('')
+  const [novaEmpresa, setNovaEmpresa] = useState('Smoke Garden - Matriz')
 
   useEffect(() => {
     fetchConfigs()
@@ -144,7 +144,7 @@ export default function Settings() {
 
       if (error) throw error
       toast.success('Empresa criada com sucesso!')
-      setNovaEmpresa('')
+      setNovaEmpresa('Smoke Garden - Matriz')
       await fetchConfigs()
       if (data?.id) await carregarEmpresa(data.id)
     } catch (error) {
@@ -271,17 +271,10 @@ export default function Settings() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              value={novaEmpresa}
-              onChange={(e) => setNovaEmpresa(e.target.value)}
-              placeholder="Nome da nova empresa"
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', flex: 1, minWidth: '200px' }}
-            />
             <button
               type="button"
               onClick={handleNovaEmpresa}
-              disabled={saving || !novaEmpresa.trim()}
+              disabled={saving}
               style={{ padding: '8px 16px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
             >
               + Nova Empresa
