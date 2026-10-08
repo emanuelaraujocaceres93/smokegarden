@@ -226,10 +226,22 @@ img, svg {
 .layout-content {
   flex: 1;
   min-height: 100vh;
-  margin-left: 0;
+  margin-left: 280px;
   transition: margin-left 0.3s ease;
   overflow-x: auto; /* ALTERADO: hidden -> auto */
   width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .layout-sidebar {
+    transform: translateX(0) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .layout-content {
+    margin-left: 0 !important;
+  }
 }
 
 /* ===== HEADER RESPONSIVO ===== */

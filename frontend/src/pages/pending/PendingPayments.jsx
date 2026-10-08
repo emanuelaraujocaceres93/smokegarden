@@ -178,13 +178,13 @@ const PendingPayments = () => {
 
   const categories = [
     { value: 'aluguel', label: 'Aluguel' },
-    { value: 'energia', label: 'Energia Elçtrica' },
-    { value: 'agua', label: 'çgua' },
+    { value: 'energia', label: 'Energia Elétrica' },
+    { value: 'agua', label: 'Água' },
     { value: 'internet', label: 'Internet/Telefone' },
-    { value: 'funcionarios', label: 'Funcionçrios' },
+    { value: 'funcionarios', label: 'Funcionários' },
     { value: 'impostos', label: 'Impostos' },
     { value: 'fornecedores', label: 'fornecedores' },
-    { value: 'manutencao', label: 'Manutençço' },
+    { value: 'manutencao', label: 'Manutenção' },
     { value: 'outros', label: 'Outros' }
   ]
 
@@ -208,15 +208,15 @@ const PendingPayments = () => {
         marginBottom: '24px'
       }}>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? A Receber</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>💰 A Receber</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#3A5F40' }}>{formatCurrency(stats.totalToReceive)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? A Pagar</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>📉 A Pagar</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#C62828' }}>{formatCurrency(stats.totalToPay)}</p>
         </div>
         <div style={{ backgroundColor: '#1A1A1A', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>?? Saldo</p>
+          <p style={{ color: '#9CA3AF', fontSize: '12px', marginBottom: '4px' }}>⚖️ Saldo</p>
           <p style={{ fontSize: '20px', fontWeight: 'bold', color: stats.balance >= 0 ? '#2E7D32' : '#C62828' }}>
             {formatCurrency(stats.balance)}
           </p>
@@ -238,7 +238,7 @@ const PendingPayments = () => {
             fontWeight: 'bold'
           }}
         >
-          ?? Contas a Receber
+          💰 Contas a Receber
         </button>
         <button
           onClick={() => setActiveTab('pagar')}
@@ -253,7 +253,7 @@ const PendingPayments = () => {
             fontWeight: 'bold'
           }}
         >
-          ?? Contas a Pagar
+          🧾 Contas a Pagar
         </button>
       </div>
 

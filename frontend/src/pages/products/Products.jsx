@@ -119,7 +119,7 @@ const Products = () => {
       if (error) {
         toast.error('Erro ao excluir Produto')
       } else {
-        toast.success('Produto excluçdo com sucesso!')
+        toast.success('Produto excluído com sucesso!')
         fetchProducts()
       }
     }
@@ -150,7 +150,7 @@ const Products = () => {
     <div className="p-4 md:p-6">
       <PageHeader
         title="Produtos"
-        description="Gerencie o catçlogo de Produtos, preços, estoque e Validade."
+        description="Gerencie o catálogo de Produtos, preços, estoque e Validade."
         actions={
           <button
             type="button"
@@ -177,7 +177,7 @@ const Products = () => {
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque</th>
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Estoque Mínimo</th>
                 <th className="py-3 px-4 text-left text-grayLight font-semibold border-r border-gray-600">Validade</th>
-                <th className="py-3 px-4 text-left text-grayLight font-semibold">Aççes</th>
+                <th className="py-3 px-4 text-left text-grayLight font-semibold">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -234,7 +234,7 @@ const Products = () => {
                           {new Date(product.expiry_date).toLocaleDateString('pt-BR')}
                         </span>
                       ) : (
-                        <span className="text-gray-500 text-xs">ç</span>
+                        <span className="text-gray-500 text-xs">—</span>
                       )}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
@@ -329,7 +329,7 @@ const Products = () => {
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-grayLight text-sm mb-1">Descriçço</label>
+                  <label className="block text-grayLight text-sm mb-1">Descrição</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}

@@ -22,9 +22,10 @@ const Clients = () => {
   async function fetchClients() {
     setLoading(true)
     const { Data, error } = await supabase
-      .from('clients')
+      .from('pessoas')
       .select('*')
-      .order('name')
+      .eq('tipo', 'cliente')
+      .order('nome')
     
     if (error) {
       toast.error('Erro ao carregar Clientes')
@@ -38,11 +39,11 @@ const Clients = () => {
     e.preventDefault()
     
     if (!formData.name.trim()) {
-      toast.error('Nome ç obrigatçrio')
+      toast.error('Nome é obrigatório')
       return
     }
     if (!formData.contact.trim()) {
-      toast.error('Contato ç obrigatçrio')
+      toast.error('Contato é obrigatório')
       return
     }
     
@@ -54,8 +55,8 @@ const Clients = () => {
 
     if (editingClient) {
       const { error } = await supabase
-        .from('clients')
-        .update(clientData)
+        .from('pessoas')
+        .update({ ...clientData, tipo: 'cliente' })
         .eq('id', editingClient.id)
       if (error) {
         toast.error('Erro ao atualizar Cliente')
@@ -64,8 +65,8 @@ const Clients = () => {
       }
     } else {
       const { error } = await supabase
-        .from('clients')
-        .insert([clientData])
+        .from('pessoas')
+        .insert([{ ...clientData, tipo: 'cliente' }])
       if (error) {
         toast.error('Erro ao cadastrar Cliente')
       } else {
@@ -95,11 +96,11 @@ const Clients = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('excluir este Cliente?')) {
-      const { error } = await supabase.from('clients').delete().eq('id', id)
+      const { error } = await supabase.from('pessoas').delete().eq('id', id)
       if (error) {
         toast.error('Erro ao excluir Cliente')
       } else {
-        toast.success('Cliente excluçdo!')
+        toast.success('Cliente excluído!')
         fetchClients()
       }
     }
@@ -181,8 +182,8 @@ const Clients = () => {
             >
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{client.name}</p>
-                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>?? {client.contact}</p>
-                {client.address && <p style={{ color: '#9CA3AF', margin: 0, fontSize: '12px' }}>?? {client.address}</p>}
+                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>📞 {client.contact}</p>
+                {client.address && <p style={{ color: '#9CA3AF', margin: 0, fontSize: '12px' }}>📍 {client.address}</p>}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button

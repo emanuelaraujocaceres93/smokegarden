@@ -434,19 +434,22 @@ export default function NovoOrcamento() {
                     <td style={{ padding: '12px', textAlign: 'right', color: '#4ade80' }}>{formatCurrency(item.valor_unitario)}</td>
                     <td style={{ padding: '12px', textAlign: 'right', color: 'white' }}>{formatCurrency(item.valor_total)}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <button 
+                      <button
                         onClick={() => atualizarQuantidade(index, 0)}
-                        style={{ 
-                          padding: '4px 8px', 
-                          backgroundColor: '#dc2626', 
-                          color: 'white', 
-                          border: 'none', 
-                          borderRadius: '4px', 
+                        style={{
+                          padding: '6px 10px',
+                          backgroundColor: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
                           cursor: 'pointer',
-                          fontSize: '12px'
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
-                        <Trash2 size={14} /> Remover
+                        <Trash2 size={16} /> Remover
                       </button>
                     </td>
                   </tr>

@@ -249,7 +249,7 @@ export default function Stock() {
 
       {showModal && (
         <div className="modal-backdrop">
-          <div className="modal-panel" style={{ maxWidth: 600 }}>
+          <div className="modal-panel" style={{ maxWidth: 600, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h2 className="modal-title">{editing ? 'Editar item' : 'Novo item'}</h2>
               <button className="modal-close" type="button" onClick={() => setShowModal(false)}>✕</button>

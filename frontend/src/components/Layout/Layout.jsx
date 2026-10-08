@@ -33,7 +33,7 @@ const navigation = [
 
 export default function Layout({ user, onLogout, children }) {
   const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024)
   const displayEmail = user?.email ?? 'administrador@smoke.com'
 
   useEffect(() => {

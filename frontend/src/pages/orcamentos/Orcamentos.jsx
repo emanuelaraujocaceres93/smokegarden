@@ -253,10 +253,14 @@ export default function Orcamentos() {
 
       const dadosCompletos = {
         ...orcamento,
+        empresa_config_id: orcamento.empresa_config_id || null,
         itens: itensFormatados
       }
       
-      await generatePDF(dadosCompletos, 'orcamento')
+      const result = await generatePDF(dadosCompletos, 'orcamento')
+      if (result) {
+        toast.success('PDF gerado com sucesso! Baixando...')
+      }
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)
       toast.error('Erro ao gerar PDF')

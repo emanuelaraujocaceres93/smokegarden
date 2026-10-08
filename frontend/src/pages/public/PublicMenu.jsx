@@ -900,9 +900,9 @@ export default function PublicMenu() {
                           </button>
                           <button
                             onClick={() => removerDoCarrinho(item.id)}
-                            style={{ padding: '6px 12px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                            style={{ padding: '6px 12px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={18} /> Remover
                           </button>
                         </div>
                       </div>

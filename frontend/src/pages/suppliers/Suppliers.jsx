@@ -40,11 +40,11 @@ const Suppliers = () => {
     e.preventDefault()
     
     if (!formData.name.trim()) {
-      toast.error('Nome ç obrigatçrio')
+      toast.error('Nome é obrigatório')
       return
     }
     if (!formData.contact.trim()) {
-      toast.error('Contato ç obrigatçrio')
+      toast.error('Contato é obrigatório')
       return
     }
     
@@ -63,7 +63,7 @@ const Suppliers = () => {
       if (error) {
         toast.error('Erro ao atualizar fornecedor')
       } else {
-        toast.success('fornecedor atualizado!')
+        toast.success('Fornecedor atualizado!')
       }
     } else {
       const { error } = await supabase
@@ -72,7 +72,7 @@ const Suppliers = () => {
       if (error) {
         toast.error('Erro ao cadastrar fornecedor')
       } else {
-        toast.success('fornecedor cadastrado!')
+        toast.success('Fornecedor cadastrado!')
       }
     }
 
@@ -103,7 +103,7 @@ const Suppliers = () => {
       if (error) {
         toast.error('Erro ao excluir fornecedor')
       } else {
-        toast.success('fornecedor excluçdo!')
+        toast.success('Fornecedor excluído!')
         refreshSuppliers()
       }
     }
@@ -122,7 +122,7 @@ const Suppliers = () => {
     <div style={{ padding: '16px' }}>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>fornecedores</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#D95A1A', margin: 0 }}>Fornecedores</h1>
         <p style={{ color: '#9CA3AF', fontSize: '14px', marginTop: '4px' }}>Gerencie seus fornecedores</p>
       </div>
 
@@ -185,9 +185,9 @@ const Suppliers = () => {
             >
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{supplier.name}</p>
-                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>?? {supplier.contact}</p>
-                {supplier.address && <p style={{ color: '#9CA3AF', margin: '0 0 4px 0', fontSize: '12px' }}>?? {supplier.address}</p>}
-                {supplier.notes && <p style={{ color: '#F9A825', margin: '4px 0 0 0', fontSize: '12px', fontStyle: 'italic' }}>?? {supplier.notes}</p>}
+                <p style={{ color: '#D95A1A', margin: '0 0 4px 0', fontSize: '14px' }}>📞 {supplier.contact}</p>
+                {supplier.address && <p style={{ color: '#9CA3AF', margin: '0 0 4px 0', fontSize: '12px' }}>📍 {supplier.address}</p>}
+                {supplier.notes && <p style={{ color: '#F9A825', margin: '4px 0 0 0', fontSize: '12px', fontStyle: 'italic' }}>📝 {supplier.notes}</p>}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -227,7 +227,7 @@ const Suppliers = () => {
                 <textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} rows="2" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} />
               </div>
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Observaççes (Produtos fornecidos, etc)</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Observações (Produtos fornecidos, etc)</label>
                 <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows="3" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #3A5F40', backgroundColor: '#2C2C2C', color: '#E0E0E0', resize: 'vertical' }} placeholder="Ex: Fornece çleo 2 tempos, velas, filtros..." />
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>

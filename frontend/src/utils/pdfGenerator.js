@@ -83,14 +83,17 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFillColor(217, 90, 26)
     doc.rect(0, 0, pageWidth, 5, 'F')
 
-    // Texto principal
+    // Texto principal (dinâmico conforme empresa selecionada)
+    const nomeEmpresaHeader = (empresaDados?.nome_empresa || 'Smoke Garden').trim()
+    const textoHeader = nomeEmpresaHeader ? nomeEmpresaHeader.toUpperCase() : 'SMOKE GARDEN'
     doc.setFontSize(22)
     doc.setTextColor(217, 90, 26)
-    doc.text('SMOKE GARDEN', pageWidth / 2, 20, { align: 'center' })
+    doc.setFont('helvetica', 'bold')
+    doc.text(textoHeader, pageWidth / 2, 20, { align: 'center' })
     y = 30
 
-    // Tentar adicionar o logo (da empresa ou padrão)
-    const logoUrl = empresaDados?.logo_url || await getLogoUrl()
+    // Tentar adicionar o logo (da empresa ou padrão) — sem quebrar se falhar
+    const logoUrl = (empresaDados?.logo_url && empresaDados.logo_url.trim()) ? empresaDados.logo_url : await getLogoUrl()
 
     if (logoUrl) {
       try {
@@ -299,7 +302,8 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     doc.setFontSize(8)
     doc.setTextColor(120, 120, 120)
     doc.setFont('helvetica', 'normal')
-    doc.text('Smoke Garden - Mecânica Especializada 2 Tempos', pageWidth / 2, footerY - 2, { align: 'center' })
+    const nomeFooterEmpresa = empresaDados?.nome_empresa || 'Smoke Garden - Mecânica Especializada 2 Tempos'
+    doc.text(nomeFooterEmpresa, pageWidth / 2, footerY - 2, { align: 'center' })
     doc.text('Este documento é uma proposta comercial.', pageWidth / 2, footerY + 3, { align: 'center' })
 
     const nomeArquivo = type === 'orcamento' 
