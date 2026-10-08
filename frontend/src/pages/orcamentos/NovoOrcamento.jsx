@@ -66,8 +66,39 @@ export default function NovoOrcamento() {
 
   async function carregarEmpresas() {
     const { data } = await supabase.from('configuracoes').select('id, nome_empresa').order('nome_empresa', { ascending: true })
+    
+    // Se não existe nenhuma empresa, criar a padrão (Smoke Garden)
+    if (!data || data.length === 0) {
+      const { data: novaEmpresa, error } = await supabase
+        .from('configuracoes')
+        .insert([{
+          nome_empresa: 'Smoke Garden - Matriz',
+          whatsapp_admin: '5511999999999',
+          endereco_loja: 'R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023',
+          logo_url: null,
+          chave_pix: '',
+          banco_nome: null,
+          banco_codigo: null,
+          conta_agencia: null,
+          conta_numero: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select('id, nome_empresa')
+        .single()
+      
+      if (!error && novaEmpresa) {
+        setEmpresas([novaEmpresa])
+        setEmpresaId(novaEmpresa.id)
+      } else {
+        setEmpresas([])
+        setEmpresaId('')
+      }
+      return
+    }
+    
     setEmpresas(data || [])
-    if (data && data.length > 0) setEmpresaId(data[0].id)
+    setEmpresaId(data[0].id)
   }
 
   async function carregarDados() {
