@@ -63,7 +63,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     if (orcamento.empresa_config_id) {
       const { data } = await supabase
         .from('configuracoes')
-        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin')
+        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin, slogan, site_url')
         .eq('id', orcamento.empresa_config_id)
         .maybeSingle()
       empresaDados = data
@@ -73,7 +73,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     if (!empresaDados) {
       const { data } = await supabase
         .from('configuracoes')
-        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin')
+        .select('nome_empresa, logo_url, endereco_loja, whatsapp_admin, slogan, site_url')
         .limit(1)
         .maybeSingle()
       empresaDados = data
@@ -109,11 +109,11 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     // Subtítulo
     doc.setFontSize(10)
     doc.setTextColor(100, 100, 100)
-    doc.text('Mecânica Especializada 2 Tempos', pageWidth / 2, y + 3, { align: 'center' })
+    doc.text(empresaDados?.slogan || 'Mecânica Especializada 2 Tempos', pageWidth / 2, y + 3, { align: 'center' })
 
     doc.setFontSize(9)
     doc.setTextColor(150, 150, 150)
-    doc.text('www.smokegarden.com.br', pageWidth / 2, y + 10, { align: 'center' })
+    doc.text(empresaDados?.site_url || 'www.smokegarden.com.br', pageWidth / 2, y + 10, { align: 'center' })
 
     y = y + 25
 

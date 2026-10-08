@@ -12,7 +12,9 @@ const emptyConfig = {
   banco_nome: '',
   banco_codigo: '',
   conta_agencia: '',
-  conta_numero: ''
+conta_numero: '',
+  slogan: '',
+  site_url: ''
 }
 
 export default function Settings() {
@@ -34,7 +36,7 @@ export default function Settings() {
     try {
       const { data, error } = await supabase
         .from('configuracoes')
-        .select('id, nome_empresa, logo_url, whatsapp_admin, endereco_loja, chave_pix, banco_nome, banco_codigo, conta_agencia, conta_numero')
+        .select('id, nome_empresa, logo_url, whatsapp_admin, endereco_loja, chave_pix, banco_nome, banco_codigo, conta_agencia, conta_numero, slogan, site_url')
         .order('nome_empresa', { ascending: true })
 
       if (error) {
@@ -207,6 +209,8 @@ export default function Settings() {
       banco_codigo: form.banco_codigo?.trim() || null,
       conta_agencia: form.conta_agencia?.trim() || null,
       conta_numero: form.conta_numero?.trim() || null,
+        slogan: form.slogan?.trim() || null,
+        site_url: form.site_url?.trim() || null,
       updated_at: new Date().toISOString()
     }
 
@@ -361,6 +365,32 @@ export default function Settings() {
           />
           <small style={{ color: '#666', fontSize: '12px' }}>
             Endereço que aparecerá no site e nos pedidos
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label>Slogan (subtitulo do PDF)</label>
+          <input
+            className="form-input"
+            value={form.slogan || ''}
+            onChange={(e) => handleChange('slogan', e.target.value)}
+            placeholder="Ex: Mecanica Especializada 2 Tempos"
+          />
+          <small style={{ color: '#666', fontSize: '12px' }}>
+            Texto exibido abaixo do nome da empresa no PDF
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label>Site (exibido no PDF)</label>
+          <input
+            className="form-input"
+            value={form.site_url || ''}
+            onChange={(e) => handleChange('site_url', e.target.value)}
+            placeholder="Ex: www.smokegarden.com.br"
+          />
+          <small style={{ color: '#666', fontSize: '12px' }}>
+            Endereco do site exibido abaixo do slogan no PDF
           </small>
         </div>
 
