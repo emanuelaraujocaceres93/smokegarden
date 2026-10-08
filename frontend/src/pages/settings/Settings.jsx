@@ -152,6 +152,29 @@ export default function Settings() {
     toast.success('Preencha os dados da nova empresa e clique em Salvar')
   }
 
+  async function handleExcluirEmpresa(id, nome) {
+    if (empresas.length <= 1) {
+      toast.error('Nao e possivel excluir a ultima empresa. Crie outra antes.')
+      return
+    }
+    if (!window.confirm(`Excluir a empresa "${nome}"? Essa acao nao pode ser desfeita.`)) return
+
+    try {
+      const { error } = await supabase.from('configuracoes').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Empresa excluida')
+
+      if (configId === id) {
+        setConfigId(null)
+        setForm(emptyConfig)
+      }
+      await fetchConfigs()
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      toast.error(error.message || 'Erro ao excluir empresa')
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
 
@@ -249,22 +272,41 @@ export default function Settings() {
           <h3 style={{ color: '#fff', margin: '0 0 12px', fontSize: '16px' }}>Empresas Cadastradas</h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
             {empresas.map((emp) => (
-              <button
-                key={emp.id}
-                type="button"
-                onClick={() => carregarEmpresa(emp.id)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #444',
-                  backgroundColor: configId === emp.id ? '#D95A1A' : '#333',
-                  color: configId === emp.id ? '#fff' : '#ccc',
-                  cursor: 'pointer',
-                  fontSize: '13px'
-                }}
-              >
-                {emp.nome_empresa || 'Sem nome'}
-              </button>
+              <div key={emp.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => carregarEmpresa(emp.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #444',
+                    backgroundColor: configId === emp.id ? '#D95A1A' : '#333',
+                    color: configId === emp.id ? '#fff' : '#ccc',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  {emp.nome_empresa || 'Sem nome'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExcluirEmpresa(emp.id, emp.nome_empresa)}
+                  title="Excluir empresa"
+                  style={{
+                    padding: '6px 10px',
+                    backgroundColor: '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
