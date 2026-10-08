@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/ui/PageHeader'
@@ -39,19 +39,19 @@ export default function Settings() {
 
       if (error) {
         console.error('Erro ao carregar:', error)
-        toast.error('Erro ao carregar configuraÃ§Ãµes')
+        toast.error('Erro ao carregar configurações')
       }
 
       setEmpresas(data || [])
 
-      // Se nÃ£o existe nenhuma empresa, criar a padrÃ£o
+      // Se não existe nenhuma empresa, criar a padrão
       if (!data || data.length === 0) {
         const { data: novaEmpresa, error: erroCriar } = await supabase
           .from('configuracoes')
           .insert([{
             nome_empresa: 'Smoke Garden - Matriz',
             whatsapp_admin: '5511999999999',
-            endereco_loja: 'R. LuÃ­s Nunes, 116A - Bairro JacarÃ©, CabreÃºva - SP, 13315-023',
+            endereco_loja: 'R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023',
             logo_url: null,
             chave_pix: '',
             banco_nome: null,
@@ -82,7 +82,7 @@ export default function Settings() {
       }
     } catch (error) {
       console.error('Erro:', error)
-      toast.error('Erro ao carregar configuraÃ§Ãµes')
+      toast.error('Erro ao carregar configurações')
     } finally {
       setLoading(false)
     }
@@ -108,7 +108,7 @@ export default function Settings() {
   async function uploadLogo(file) {
     if (!file) return
     if (!file?.type?.startsWith('image/')) {
-      toast.error('Selecione uma imagem vÃ¡lida (JPG, PNG, GIF)')
+      toast.error('Selecione uma imagem válida (JPG, PNG, GIF)')
       return
     }
 
@@ -136,7 +136,7 @@ export default function Settings() {
     } catch (error) {
       console.error('Erro no upload:', error)
       if (error.message?.includes('bucket not found')) {
-        toast.error('Bucket de storage nÃ£o configurado. Contate o administrador.')
+        toast.error('Bucket de storage não configurado. Contate o administrador.')
       } else {
         toast.error(error.message || 'Erro ao enviar logo')
       }
@@ -179,19 +179,19 @@ export default function Settings() {
     event.preventDefault()
 
     if (!form.nome_empresa?.trim()) {
-      toast.error('Nome da empresa Ã© obrigatÃ³rio')
+      toast.error('Nome da empresa é obrigatório')
       return
     }
     if (!form.whatsapp_admin.trim()) {
-      toast.error('WhatsApp Admin Ã© obrigatÃ³rio')
+      toast.error('WhatsApp Admin é obrigatório')
       return
     }
     if (!form.endereco_loja.trim()) {
-      toast.error('EndereÃ§o da loja Ã© obrigatÃ³rio')
+      toast.error('Endereço da loja é obrigatório')
       return
     }
     if (!form.chave_pix.trim()) {
-      toast.error('Chave PIX Ã© obrigatÃ³ria')
+      toast.error('Chave PIX é obrigatória')
       return
     }
 
@@ -235,11 +235,11 @@ export default function Settings() {
         setConfigId(result.data.id)
       }
 
-      toast.success('ConfiguraÃ§Ãµes salvas com sucesso!')
+      toast.success('Configurações salvas com sucesso!')
       await fetchConfigs()
     } catch (error) {
       console.error('Erro ao salvar:', error)
-      toast.error(error.message || 'Erro ao salvar configuraÃ§Ãµes')
+      toast.error(error.message || 'Erro ao salvar configurações')
     } finally {
       setSaving(false)
     }
@@ -253,7 +253,7 @@ export default function Settings() {
     return (
       <div className="p-4 md:p-6">
         <div className="panel" style={{ textAlign: 'center', padding: '40px' }}>
-          <p>Carregando configuraÃ§Ãµes...</p>
+          <p>Carregando configurações...</p>
         </div>
       </div>
     )
@@ -262,11 +262,11 @@ export default function Settings() {
   return (
     <div className="p-4 md:p-6">
       <PageHeader
-        title="ConfiguraÃ§Ãµes da Loja"
-        description="Configure WhatsApp, endereÃ§o, logo, PIX e dados bancÃ¡rios. Cada empresa tem seus prÃ³prios dados."
+        title="Configurações da Loja"
+        description="Configure WhatsApp, endereço, logo, PIX e dados bancários. Cada empresa tem seus próprios dados."
       />
 
-      {/* Lista e criaÃ§Ã£o de empresas */}
+      {/* Lista e criação de empresas */}
       <div style={{ maxWidth: 820, margin: '0 auto', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#2a2a2a', padding: '16px', borderRadius: '12px', border: '1px solid #333' }}>
           <h3 style={{ color: '#fff', margin: '0 0 12px', fontSize: '16px' }}>Empresas Cadastradas</h3>
@@ -329,7 +329,7 @@ export default function Settings() {
             className="form-input"
             value={form.nome_empresa || ''}
             onChange={(e) => handleChange('nome_empresa', e.target.value)}
-            placeholder="Ex: Smoke Garden - CabreÃºva"
+            placeholder="Ex: Smoke Garden - Cabreúva"
             required
           />
         </div>
@@ -345,22 +345,22 @@ export default function Settings() {
             required
           />
           <small style={{ color: '#666', fontSize: '12px' }}>
-            NÃºmero que receberÃ¡ os pedidos via WhatsApp
+            Número que receberá os pedidos via WhatsApp
           </small>
         </div>
 
         <div className="form-group">
-          <label>EndereÃ§o da Loja *</label>
+          <label>Endereço da Loja *</label>
           <textarea
             className="form-textarea"
             rows="3"
             value={form.endereco_loja}
             onChange={(e) => handleChange('endereco_loja', e.target.value)}
-            placeholder="R. LuÃ­s Nunes, 116A - Bairro JacarÃ©, CabreÃºva - SP, 13315-023"
+            placeholder="R. Luís Nunes, 116A - Bairro Jacaré, Cabreúva - SP, 13315-023"
             required
           />
           <small style={{ color: '#666', fontSize: '12px' }}>
-            EndereÃ§o que aparecerÃ¡ no site e nos pedidos
+            Endereço que aparecerá no site e nos pedidos
           </small>
         </div>
 
@@ -414,7 +414,7 @@ export default function Settings() {
 
         <div className="card" style={{ marginTop: '20px', padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
           <h2 className="panel-title" style={{ fontSize: '18px', marginBottom: '16px' }}>
-            ðŸ’° Dados BancÃ¡rios (QR Code PIX)
+            ðŸ’° Dados Bancários (QR Code PIX)
           </h2>
 
           <div className="form-group">
@@ -443,7 +443,7 @@ export default function Settings() {
               />
             </div>
             <div className="form-group">
-              <label>CÃ³digo do Banco</label>
+              <label>Código do Banco</label>
               <input
                 className="form-input"
                 value={form.banco_codigo || ''}
@@ -452,7 +452,7 @@ export default function Settings() {
               />
             </div>
             <div className="form-group">
-              <label>AgÃªncia</label>
+              <label>Agência</label>
               <input
                 className="form-input"
                 value={form.conta_agencia || ''}
@@ -484,7 +484,7 @@ export default function Settings() {
             fontSize: '16px'
           }}
         >
-          {saving ? 'ðŸ’¾ Salvando...' : 'ðŸ’¾ Salvar ConfiguraÃ§Ãµes'}
+          {saving ? 'ðŸ’¾ Salvando...' : 'ðŸ’¾ Salvar Configurações'}
         </button>
       </form>
     </div>
