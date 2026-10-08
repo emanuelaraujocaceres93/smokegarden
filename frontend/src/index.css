@@ -533,11 +533,28 @@ img, svg {
   
   .table tbody td:last-child {
     justify-content: flex-end;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   
-  .table tbody td:last-child::before {
-    display: none;
+  .table tbody td.actions-cell,
+  .table tbody td[data-label="Ações"] {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  .table tbody td.actions-cell::before,
+  .table tbody td[data-label="Ações"]::before {
+    display: none !important;
+  }
+  
+  .table tbody td.actions-cell .btn-sm,
+  .table tbody td[data-label="Ações"] .btn-sm {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   
   .badge {
