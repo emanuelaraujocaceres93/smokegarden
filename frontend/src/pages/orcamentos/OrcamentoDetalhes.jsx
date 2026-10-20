@@ -262,6 +262,9 @@ export default function OrcamentoDetalhes() {
               <button onClick={cancelarEdicao} disabled={salvando} style={{ padding: '8px 16px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flex: isMobile ? '1' : '0' }}>
                 <X size={16} /> Cancelar
               </button>
+              <button onClick={excluirOrcamento} style={{ padding: '8px 16px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flex: isMobile ? '1' : '0' }}>
+                <Trash2 size={16} /> Excluir
+              </button>
               <button onClick={salvarAlteracoes} disabled={salvando} style={{ padding: '8px 16px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flex: isMobile ? '1' : '0' }}>
                 <Save size={16} /> {salvando ? 'Salvando...' : 'Salvar'}
               </button>
