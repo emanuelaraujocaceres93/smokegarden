@@ -211,6 +211,7 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       body: tableBody,
       margin: { left: 15, right: 15 },
       theme: 'striped',
+      showHead: 'firstPage',
       headStyles: {
         fillColor: [217, 90, 26],
         textColor: [255, 255, 255],
@@ -235,6 +236,14 @@ export async function generatePDF(orcamento, type = 'orcamento') {
 
     const finalY = doc.lastAutoTable.finalY + 10
 
+    // Se não houver espaço para totais + linha + observações, pular para nova página
+    if (finalY > pageHeight - 30) {
+      doc.addPage()
+    }
+
+    // Sempre usar Y seguro: se está na última página após quebra, começar abaixo do topo
+    let currentY = (doc.getNumberOfPages() > 1 && doc.lastAutoTable.finalY < 50) ? 20 : finalY
+
     // Calcular totais
     const subtotal = itens.reduce((sum, item) => {
       const val = item.valor_total || item.preco_total || 
@@ -248,8 +257,6 @@ export async function generatePDF(orcamento, type = 'orcamento') {
     const totalX = pageWidth - 50
     
     // SÓ mostra Subtotal se houver desconto
-    let currentY = finalY
-    
     if (desconto > 0) {
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
@@ -294,6 +301,8 @@ export async function generatePDF(orcamento, type = 'orcamento') {
       doc.text(splitObs, 15, currentY)
     }
 
+    // Footer apenas na última página
+    const isLastPage = doc.getNumberOfPages() === doc.getNumberOfPages() // sempre verdadeiro no final do desenho; footer desenhado uma vez
     const footerY = pageHeight - 12
     doc.setDrawColor(217, 90, 26)
     doc.setLineWidth(0.5)
